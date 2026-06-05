@@ -5,6 +5,9 @@
     "projectName": {
       "value": "fpmb"
     },
+    "sourceType": {
+      "value": "postgresql"
+    },
     "location": {
       "value": "swedencentral"
     },

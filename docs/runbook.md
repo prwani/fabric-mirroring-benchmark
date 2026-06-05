@@ -7,12 +7,15 @@ Copy `config/benchmark.env.example` to `.env`.
 Important defaults:
 
 - `AZURE_LOCATION=swedencentral`
+- `SOURCE_TYPE=postgresql`
 - `TPROC_H_SCALE_FACTOR=1`
 - `FABRIC_CAPACITY_SKU=F8`
 - `POSTGRES_SKU_TIER=GeneralPurpose`
 - `POSTGRES_SKU_NAME=Standard_D2ds_v5`
 
 Scale factor 1 is the default initial data-load target for TPROC-H. Increase it only after the full run works at SF=1.
+
+For non-PostgreSQL sources, set `SOURCE_TYPE` and read the matching `sources/<source>/README.md` before deployment. PostgreSQL is the only currently live-validated default path.
 
 ## 2. Deploy Azure resources
 
@@ -29,6 +32,12 @@ CLI path for local development:
 scripts/provision/deploy-azure.sh
 ```
 
+To select a non-default source through the CLI:
+
+```bash
+SOURCE_TYPE=mysql scripts/provision/deploy-azure.sh
+```
+
 Record deployment outputs in `.env`, especially:
 
 - `POSTGRES_HOST`
@@ -36,7 +45,17 @@ Record deployment outputs in `.env`, especially:
 - `FABRIC_CAPACITY_ID`
 - benchmark VM public IP
 
-## 3. Prepare PostgreSQL
+## 3. Prepare the source database
+
+Follow the relevant source adapter docs:
+
+- `sources/postgresql/README.md`
+- `sources/mysql/README.md`
+- `sources/azure-sql-db/README.md`
+- `sources/sql-mi/README.md`
+- `sources/sql-server/README.md`
+
+PostgreSQL-specific setup:
 
 Run the SQL prerequisites:
 
@@ -71,7 +90,7 @@ Set `HAMMERDB_CLI` if `hammerdbcli` is not on `PATH`.
 "${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-build-tproch.tcl
 ```
 
-After load, rerun PostgreSQL validation. Fabric mirroring requires mirrored tables to have primary keys. If HammerDB creates any table without a primary key, fix that before starting mirroring.
+After load, rerun the source validation. Fabric mirroring requires source-specific prerequisites; for relational benchmark tables, primary keys are required for the current PostgreSQL marker/table parity workflow.
 
 ## 6. Set up Fabric mirroring
 

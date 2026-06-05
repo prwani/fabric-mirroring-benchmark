@@ -8,6 +8,7 @@ var vnetName = 'vnet-${projectName}-${token}'
 var nsgName = 'nsg-${projectName}-${token}'
 var publicIpName = 'pip-${projectName}-${token}'
 var vmSubnetName = 'snet-vm'
+var sqlMiSubnetName = 'snet-sqlmi'
 
 resource nsg 'Microsoft.Network/networkSecurityGroups@2024-07-01' = {
   name: nsgName
@@ -64,11 +65,26 @@ resource vnet 'Microsoft.Network/virtualNetworks@2024-07-01' = {
           }
         }
       }
+      {
+        name: sqlMiSubnetName
+        properties: {
+          addressPrefix: '10.42.2.0/24'
+          delegations: [
+            {
+              name: 'managedInstanceDelegation'
+              properties: {
+                serviceName: 'Microsoft.Sql/managedInstances'
+              }
+            }
+          ]
+        }
+      }
     ]
   }
 }
 
 output vmSubnetId string = vnet.properties.subnets[0].id
+output sqlMiSubnetId string = vnet.properties.subnets[1].id
 output publicIpId string = publicIp.id
 output publicIpName string = publicIp.name
 output publicIpAddress string = publicIp.properties.ipAddress

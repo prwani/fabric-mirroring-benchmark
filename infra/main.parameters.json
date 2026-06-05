@@ -3,6 +3,7 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "projectName": { "value": "fpmb" },
+    "sourceType": { "value": "postgresql" },
     "location": { "value": "swedencentral" },
     "adminUsername": { "value": "azureuser" },
     "adminSshPublicKey": { "value": "REPLACE_WITH_SSH_PUBLIC_KEY" },
@@ -18,4 +19,3 @@
     "fabricAdminUpn": { "value": "REPLACE_WITH_ADMIN_UPN" }
   }
 }
-

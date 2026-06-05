@@ -31,6 +31,7 @@ az deployment group create \
   --template-file "$ROOT/infra/main.bicep" \
   --parameters \
     projectName="${PROJECT_NAME:-fpmb}" \
+    sourceType="${SOURCE_TYPE:-postgresql}" \
     location="$LOCATION" \
     adminSshPublicKey="$SSH_KEY" \
     operatorPublicIp="$OPERATOR_PUBLIC_IP" \
@@ -41,9 +42,19 @@ az deployment group create \
     postgresSkuName="${POSTGRES_SKU_NAME:-Standard_D2ds_v5}" \
     postgresSkuTier="${POSTGRES_SKU_TIER:-GeneralPurpose}" \
     postgresStorageGb="${POSTGRES_STORAGE_GB:-128}" \
+    mysqlAdminUser="${MYSQL_ADMIN_USER:-mysqladmin}" \
+    mysqlAdminPassword="${MYSQL_ADMIN_PASSWORD:-}" \
+    mysqlDatabaseName="${MYSQL_DATABASE:-tpch}" \
+    mysqlVersion="${MYSQL_VERSION:-8.0.21}" \
+    mysqlSkuName="${MYSQL_SKU_NAME:-Standard_D2ds_v4}" \
+    mysqlStorageGb="${MYSQL_STORAGE_GB:-128}" \
+    sqlEntraAdminLogin="${SQL_ENTRA_ADMIN_LOGIN:-}" \
+    sqlEntraAdminObjectId="${SQL_ENTRA_ADMIN_OBJECT_ID:-}" \
+    azureSqlDatabaseName="${AZURE_SQL_DATABASE:-tpch}" \
+    sqlServerVmAdminUsername="${SQL_SERVER_VM_ADMIN_USERNAME:-azureuser}" \
+    sqlServerVmAdminPassword="${SQL_SERVER_VM_ADMIN_PASSWORD:-}" \
     fabricCapacitySku="${FABRIC_CAPACITY_SKU:-F8}" \
     fabricAdminUpn="$ADMIN_UPN" \
   --only-show-errors
 
 echo "Deployment completed at $(timestamp_utc)."
-
