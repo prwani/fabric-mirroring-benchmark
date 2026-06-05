@@ -8,7 +8,7 @@ The default experiment deploys to **Sweden Central** and uses **HammerDB TPROC-H
 
 ## Deploy to Azure
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fprwani%2Ffabric-postgres-mirroring-benchmark%2Fmain%2Fazuredeploy.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fprwani%2Ffabric-mirroring-benchmark%2Fmain%2Fazuredeploy.json)
 
 The button deploys the default Azure infrastructure from `azuredeploy.json`: PostgreSQL Flexible Server, benchmark VM, Fabric capacity, networking, firewall rules, and Log Analytics. Fabric workspace/mirroring setup and benchmark execution continue from `docs/runbook.md` because Fabric mirrored database configuration depends on tenant permissions and Fabric control-plane APIs.
 
@@ -103,4 +103,3 @@ python3 -m py_compile scripts/provision/setup-fabric-items.py scripts/benchmark/
    ```
 
 4. Follow `docs/runbook.md` and the relevant `sources/<source>/README.md` for source-specific setup, Fabric mirroring setup, initial sync measurement, CDC latency measurement, and cleanup.
-
