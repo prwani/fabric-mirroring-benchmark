@@ -1,0 +1,3 @@
+batch_id,marker_id,source_send_ts,source_commit_ts,fabric_seen_ts,latency_ms
+batch-sample,00000000-0000-0000-0000-000000000000,2026-01-01T00:00:00Z,2026-01-01T00:00:01Z,2026-01-01T00:00:08Z,7000
+

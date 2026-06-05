@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "projectName": { "value": "fpmb" },
+    "location": { "value": "swedencentral" },
+    "adminUsername": { "value": "azureuser" },
+    "adminSshPublicKey": { "value": "REPLACE_WITH_SSH_PUBLIC_KEY" },
+    "operatorPublicIp": { "value": "REPLACE_WITH_OPERATOR_PUBLIC_IP_CIDR" },
+    "postgresAdminUser": { "value": "pgadmin" },
+    "postgresAdminPassword": { "value": "REPLACE_WITH_STRONG_PASSWORD" },
+    "postgresDatabaseName": { "value": "tpch" },
+    "postgresVersion": { "value": "16" },
+    "postgresSkuName": { "value": "Standard_D2ds_v5" },
+    "postgresSkuTier": { "value": "GeneralPurpose" },
+    "postgresStorageGb": { "value": 128 },
+    "fabricCapacitySku": { "value": "F8" },
+    "fabricAdminUpn": { "value": "REPLACE_WITH_ADMIN_UPN" }
+  }
+}
+
