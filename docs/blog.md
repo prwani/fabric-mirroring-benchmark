@@ -195,6 +195,38 @@ Summary:
 
 This was an idle CDC test after the initial load. For a broader benchmark, repeat the same marker test while HammerDB query workload is running and while source-side CPU, storage, IOPS, connections, and WAL metrics are being captured.
 
+## Test schema refresh on a small mirrored table
+
+Before using a large table such as `lineitem` for schema-change and bulk-update testing, we ran a small schema refresh test on `region`.
+
+The test added two nullable columns to PostgreSQL `public.region` and populated all five rows:
+
+```sql
+ALTER TABLE public.region
+  ADD COLUMN IF NOT EXISTS mirror_schema_refresh_test_batch text;
+
+ALTER TABLE public.region
+  ADD COLUMN IF NOT EXISTS mirror_schema_refresh_test_ts timestamptz;
+
+UPDATE public.region
+SET mirror_schema_refresh_test_batch = 'region-schema-refresh-test',
+    mirror_schema_refresh_test_ts = clock_timestamp()
+WHERE mirror_schema_refresh_test_batch IS NULL
+   OR mirror_schema_refresh_test_ts IS NULL;
+```
+
+Observed result:
+
+| Observation | Result |
+|---|---:|
+| Source rows updated | 5 |
+| Initial Fabric SQL endpoint visibility | 0 of 2 new columns |
+| Time until new columns appeared in Fabric SQL endpoint | ~1 minute |
+| Fabric table state during test | `Replicating` |
+| `region` processed rows before/after | 5 -> 10 |
+
+This small-table test showed that Fabric can automatically surface new nullable source columns in the mirrored SQL endpoint. The behavior differed from the larger `lineitem` table, where new columns did not appear automatically during the observed window. This difference should be confirmed with the Fabric product team before making a broad statement about schema refresh behavior.
+
 ## What we learned
 
 ### 1. Use a real data generator
