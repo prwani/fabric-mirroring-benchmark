@@ -75,9 +75,9 @@ This list tracks the Microsoft Fabric mirroring source types from the Fabric ove
 
 The PostgreSQL template enables logical replication prerequisites and allow-lists only user-installable PostgreSQL extensions (`uuid-ossp`, `pg_stat_statements`). Fabric-specific mirroring components are configured by the Fabric mirroring setup flow when supported by the tenant.
 
-## Test gates
+## Blog
 
-The blog post is intentionally not written in this scaffold. It should be the final step after both the agent and user have run the repo end-to-end successfully in a real Azure/Fabric tenant.
+The first end-to-end PostgreSQL baseline write-up is available in `docs/blog.md`.
 
 Static validation available before live deployment:
 
