@@ -1,5 +1,6 @@
 .env
 *.env
+.azure/
 *.log
 *.tmp
 *.bak
@@ -15,4 +16,3 @@ results/**/*.json
 !results/sample/*.csv
 hammerdb/
 HammerDB-*/
-
