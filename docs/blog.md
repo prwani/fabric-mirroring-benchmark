@@ -195,6 +195,70 @@ Summary:
 
 This was an idle CDC test after the initial load. For a broader benchmark, repeat the same marker test while HammerDB query workload is running and while source-side CPU, storage, IOPS, connections, and WAL metrics are being captured.
 
+### Bulk marker insert/update results
+
+The single-row marker test proves that CDC is flowing, but it is too small to represent a real application change burst. We therefore added a bulk marker test that writes many rows under the same `batch_id` and measures when the entire batch is visible in the Fabric SQL endpoint.
+
+Bulk insert test:
+
+- Operation: insert into `public.fabric_cdc_latency_marker`
+- Batch size: 500 rows
+- Batches: 3
+- Poll interval: 30 seconds
+- Timeout: 30 minutes
+
+| Batch | Rows visible in Fabric | Latency from last source commit |
+|---:|---:|---:|
+| 1 | 500 / 500 | 207.4s |
+| 2 | 500 / 500 | 162.6s |
+| 3 | 500 / 500 | 161.3s |
+
+Bulk insert summary:
+
+| Metric | Value |
+|---|---:|
+| Total rows inserted | 1,500 |
+| Completed batches | 3 / 3 |
+| Minimum batch latency | 161.3s |
+| Median batch latency | 162.6s |
+| Maximum batch latency | 207.4s |
+
+Bulk update test:
+
+- Operation: update marker rows after seeding a 500-row batch
+- Batch size: 500 rows
+- Batches: 1
+- Poll interval: 30 seconds
+- Timeout: 30 minutes
+
+| Batch | Rows visible in Fabric | Latency from last source commit |
+|---:|---:|---:|
+| 1 | 500 / 500 | 159.9s |
+
+These bulk-marker results are more useful than the original five single-row markers for p50/p90-style latency analysis. They still represent a synthetic marker workload, so the next step is to run the same marker test while HammerDB TPROC-C or another write-heavy workload is applying realistic source pressure.
+
+### Pending large-table update scenario
+
+We also started preparing a large-table update test on `lineitem` by adding benchmark-only nullable columns:
+
+```sql
+ALTER TABLE public.lineitem
+  ADD COLUMN IF NOT EXISTS mirror_benchmark_update_ts timestamptz;
+
+ALTER TABLE public.lineitem
+  ADD COLUMN IF NOT EXISTS mirror_benchmark_update_batch text;
+```
+
+Those columns were populated for all 6,001,259 `lineitem` rows with baseline values. The PostgreSQL update completed in about 3 minutes 42 seconds. The intended next test is to update a subset such as 100K or 1M `lineitem` rows and measure:
+
+- source update duration,
+- Fabric visibility latency,
+- Fabric processed rows/bytes,
+- Delta/OneLake data-file and `_delta_log` growth,
+- old vs new values through Fabric Warehouse time travel.
+
+At the time of writing, this large-table scenario is still pending because after removing and re-adding `lineitem` to refresh its schema, Fabric showed the table in `Initialized` state with zero processed rows and it was not yet queryable in the SQL endpoint.
+
 ## Test schema refresh on a small mirrored table
 
 Before using a large table such as `lineitem` for schema-change and bulk-update testing, we ran a small schema refresh test on `region`.
