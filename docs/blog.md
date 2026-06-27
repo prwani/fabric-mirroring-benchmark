@@ -259,6 +259,18 @@ Those columns were populated for all 6,001,259 `lineitem` rows with baseline val
 
 At the time of writing, this large-table scenario is still pending because after removing and re-adding `lineitem` to refresh its schema, Fabric showed the table in `Initialized` state with zero processed rows and it was not yet queryable in the SQL endpoint.
 
+### Small-table time-travel observation
+
+After the `region` schema refresh test, we updated the five `region` rows a second time and used the Fabric status API plus SQL endpoint to observe the result. The Fabric table status showed `region` processed rows increasing from 10 to 15 and the SQL endpoint eventually showed the new batch value for all five rows.
+
+However, T-SQL time travel against the mirrored SQL endpoint returned:
+
+```text
+The object isn't versioned, so time travel isn't supported.
+```
+
+This suggests that the Fabric Warehouse time-travel syntax documented for Warehouse objects might not apply directly to the mirrored SQL endpoint object used in this run. For the storage/time-travel part of the benchmark, the safer next step is to use the Spark/Delta notebook path against the mirrored OneLake table and confirm SQL endpoint time-travel support with the Fabric product team before publishing external claims.
+
 ## Test schema refresh on a small mirrored table
 
 Before using a large table such as `lineitem` for schema-change and bulk-update testing, we ran a small schema refresh test on `region`.

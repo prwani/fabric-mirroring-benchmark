@@ -214,6 +214,26 @@ scripts/benchmark/capture-platform-metrics.sh
 
 If Fabric exposes mirroring latency/status metrics through the UI/API in your tenant, export or screenshot those values and save them with the run results.
 
+Capture Fabric table-level status snapshots during long-running tests:
+
+```bash
+python3 scripts/benchmark/capture-fabric-mirroring-status.py \
+  --workspace-id "$FABRIC_WORKSPACE_ID" \
+  --mirrored-database-id "$FABRIC_MIRRORED_DATABASE_ID" \
+  --output results/fabric-mirroring-status.json
+```
+
+Check whether expected schema changes are visible in the Fabric SQL endpoint:
+
+```bash
+python3 scripts/benchmark/check-fabric-table-schema.py \
+  --server "$FABRIC_ODBC_SERVER" \
+  --database "$FABRIC_DATABASE" \
+  --schema _public \
+  --table lineitem \
+  --columns mirror_benchmark_update_batch,mirror_benchmark_update_ts
+```
+
 ## 9. Measure large-table update impact
 
 HammerDB TPROC-H queries reference the standard TPC-H columns. Adding nullable benchmark-only columns to `lineitem` is safe for the benchmark flow because it does not change existing column names or query semantics. Apply this after the HammerDB build:
@@ -276,3 +296,7 @@ Include this short activity split in the blog:
 | AI agent activity | Human activity |
 |---|---|
 | Deploy Azure infrastructure, configure PostgreSQL prerequisites, run HammerDB load, collect metrics, summarize results | Complete Fabric portal connection/mirroring permission prompts, review results, approve final blog |
+
+## 13. TPROC-C follow-up
+
+Use `docs/tproc-c-plan.md` for the next write-heavy benchmark design. The recommended model is to run HammerDB TPROC-C for realistic transactional pressure while keeping marker-table batches as the precise latency probe.
