@@ -226,6 +226,8 @@ psql "$POSTGRES_PSQL_CONN" \
 
 Wait until the new columns are visible through the Fabric SQL endpoint, then run a controlled large-table update. Start with 100K rows before attempting 1M rows or the full `lineitem` table:
 
+If the benchmark columns do not appear in Fabric after the PostgreSQL schema change, refresh the table in the Fabric mirroring configuration. In one validation run, Fabric did not automatically pick up the new `lineitem` columns; the table had to be removed from the mirrored table list and then added again. Treat this as an observation to confirm with the Fabric product team before publishing externally. A follow-up small-table test on `region` did pick up two new nullable columns automatically after about one minute, so this behavior might depend on table size, table state, or mirroring refresh timing. After re-adding a table, wait for `getTablesMirroringStatus` to move it from `Initialized` to `Replicating` and for `processedRows` to increase before running the bulk-update measurement.
+
 ```bash
 python3 scripts/benchmark/run-lineitem-bulk-update.py \
   --pg-conn "$POSTGRES_PSQL_CONN" \

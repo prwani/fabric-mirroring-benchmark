@@ -226,6 +226,10 @@ The Azure infrastructure deployment is automated. Fabric workspace creation can 
 
 During setup, Fabric returned transient connection resolution errors, including HTTP 429. Waiting, deleting stale connections, and creating a new connection resolved the issue.
 
+### 7. Source schema changes might require a table refresh
+
+When nullable benchmark columns were added to PostgreSQL `lineitem`, Fabric did not automatically surface those new columns in the mirrored SQL endpoint. The table had to be removed from the Fabric mirrored table list and then added again. After re-adding it, the table status returned to `Initialized` and needed to complete a new copy before it became queryable again. A follow-up test on the much smaller `region` table did surface two new nullable columns automatically after about one minute. Treat this as observed behavior to confirm with the Fabric product team before publishing externally.
+
 ## AI agent vs human activity split
 
 | AI agent activity | Human activity |
@@ -270,4 +274,3 @@ This repo now has a validated PostgreSQL baseline. The next useful experiments a
 3. Compare Fabric capacity SKUs.
 4. Validate the MySQL, Azure SQL Database, SQL Managed Instance, and SQL Server adapters.
 5. Add charts and result summaries under `results/` for each reproducible run.
-
