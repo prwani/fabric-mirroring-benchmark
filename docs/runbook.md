@@ -167,6 +167,45 @@ python3 scripts/benchmark/run-cdc-latency-test.py \
   --fabric-marker-table "$FABRIC_MARKER_TABLE"
 ```
 
+For larger insert/update batches, run the bulk CDC test. This measures when the entire batch is visible in Fabric and records latency from both first and last source commit timestamps:
+
+```bash
+python3 scripts/benchmark/run-cdc-bulk-test.py \
+  --pg-conn "$POSTGRES_PSQL_CONN" \
+  --operation insert \
+  --batch-size 500 \
+  --batches 3 \
+  --fabric-sqlcmd-args "$FABRIC_SQLCMD_ARGS" \
+  --fabric-marker-table "$FABRIC_MARKER_TABLE"
+```
+
+To test updates, the script first seeds mirrored marker rows, waits for the seed batch to appear in Fabric, then updates those rows and measures update visibility:
+
+```bash
+python3 scripts/benchmark/run-cdc-bulk-test.py \
+  --pg-conn "$POSTGRES_PSQL_CONN" \
+  --operation update \
+  --batch-size 500 \
+  --batches 3 \
+  --fabric-sqlcmd-args "$FABRIC_SQLCMD_ARGS" \
+  --fabric-marker-table "$FABRIC_MARKER_TABLE"
+```
+
+If interactive `sqlcmd -G` is not practical, use ODBC token authentication instead:
+
+```bash
+python3 -m pip install 'pyodbc'
+
+python3 scripts/benchmark/run-cdc-bulk-test.py \
+  --pg-conn "$POSTGRES_PSQL_CONN" \
+  --operation insert \
+  --batch-size 500 \
+  --batches 3 \
+  --fabric-odbc-server "$FABRIC_ODBC_SERVER" \
+  --fabric-database "$FABRIC_DATABASE" \
+  --fabric-marker-table "$FABRIC_MARKER_TABLE"
+```
+
 Capture PostgreSQL platform metrics during the same window:
 
 ```bash
@@ -175,7 +214,42 @@ scripts/benchmark/capture-platform-metrics.sh
 
 If Fabric exposes mirroring latency/status metrics through the UI/API in your tenant, export or screenshot those values and save them with the run results.
 
-## 9. Summarize results
+## 9. Measure large-table update impact
+
+HammerDB TPROC-H queries reference the standard TPC-H columns. Adding nullable benchmark-only columns to `lineitem` is safe for the benchmark flow because it does not change existing column names or query semantics. Apply this after the HammerDB build:
+
+```bash
+psql "$POSTGRES_PSQL_CONN" \
+  -v ON_ERROR_STOP=1 \
+  -f scripts/provision/setup-lineitem-bulk-update.sql
+```
+
+Wait until the new columns are visible through the Fabric SQL endpoint, then run a controlled large-table update. Start with 100K rows before attempting 1M rows or the full `lineitem` table:
+
+```bash
+python3 scripts/benchmark/run-lineitem-bulk-update.py \
+  --pg-conn "$POSTGRES_PSQL_CONN" \
+  --rows 100000 \
+  --batches 1 \
+  --fabric-sqlcmd-args "$FABRIC_SQLCMD_ARGS" \
+  --fabric-lineitem-table "$FABRIC_LINEITEM_TABLE"
+```
+
+The output CSV records source update timestamps, Fabric visibility time, latency from first and last updated row, and sample `l_orderkey`/`l_linenumber` values for time-travel validation.
+
+Use Fabric Warehouse time travel to compare before and after values for the sampled row. See `scripts/analysis/fabric-time-travel-lineitem.sql` and replace the placeholders with values from the CSV:
+
+```sql
+SELECT l_orderkey, l_linenumber, mirror_benchmark_update_batch, mirror_benchmark_update_ts
+FROM [_public].[lineitem]
+WHERE l_orderkey = <l_orderkey>
+  AND l_linenumber = <l_linenumber>
+OPTION (FOR TIMESTAMP AS OF '<before_timestamp_utc>');
+```
+
+To measure Delta/OneLake storage impact, run the Fabric Spark notebook template in `notebooks/fabric-delta-storage-inspection.py` before and after the bulk update. Capture data-file bytes, `_delta_log` bytes, Delta history, and table row counts.
+
+## 10. Summarize results
 
 ```bash
 python3 scripts/analysis/summarize-results.py \
@@ -183,7 +257,7 @@ python3 scripts/analysis/summarize-results.py \
   --output results/summary.json
 ```
 
-## 10. Cleanup
+## 11. Cleanup
 
 Stop/delete Fabric mirroring first, then verify/drop orphaned replication slots in PostgreSQL. Only then delete Azure resources:
 
@@ -191,7 +265,7 @@ Stop/delete Fabric mirroring first, then verify/drop orphaned replication slots 
 scripts/provision/teardown-azure.sh
 ```
 
-## 11. Blog post
+## 12. Blog post
 
 Before writing the blog, confirm the **Deploy to Azure** button has been tested from the published repo and the Azure deployment succeeds. Write the blog only after both the agent and user have tested every repo step successfully with live Azure and Fabric resources.
 
