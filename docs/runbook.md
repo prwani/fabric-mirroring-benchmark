@@ -57,7 +57,7 @@ Follow the relevant source adapter docs:
 
 PostgreSQL-specific setup:
 
-Run the SQL prerequisites:
+Run the SQL prerequisites before the HammerDB build:
 
 ```bash
 export PGPASSWORD="$POSTGRES_ADMIN_PASSWORD"
@@ -91,6 +91,14 @@ Set `HAMMERDB_CLI` if `hammerdbcli` is not on `PATH`.
 ```
 
 After load, rerun the source validation. Fabric mirroring requires source-specific prerequisites; for relational benchmark tables, primary keys are required for the current PostgreSQL marker/table parity workflow.
+
+Create the CDC marker table after the HammerDB schema build. HammerDB requires an empty target database, so do not create the marker table before the TPROC-H build:
+
+```bash
+psql "host=$POSTGRES_HOST port=5432 dbname=$POSTGRES_DATABASE user=$POSTGRES_ADMIN_USER sslmode=require" \
+  -v ON_ERROR_STOP=1 \
+  -f scripts/provision/setup-cdc-marker.sql
+```
 
 ## 6. Set up Fabric mirroring
 
@@ -183,3 +191,9 @@ scripts/provision/teardown-azure.sh
 ## 11. Blog post
 
 Before writing the blog, confirm the **Deploy to Azure** button has been tested from the published repo and the Azure deployment succeeds. Write the blog only after both the agent and user have tested every repo step successfully with live Azure and Fabric resources.
+
+Include this short activity split in the blog:
+
+| AI agent activity | Human activity |
+|---|---|
+| Deploy Azure infrastructure, configure PostgreSQL prerequisites, run HammerDB load, collect metrics, summarize results | Complete Fabric portal connection/mirroring permission prompts, review results, approve final blog |

@@ -13,14 +13,16 @@ dbset db pg
 dbset bm TPROC-H
 diset connection pg_host $pg_host
 diset connection pg_port $pg_port
-diset connection pg_user $pg_user
-diset connection pg_pass $pg_pass
-diset connection pg_dbase $pg_db
+diset connection pg_sslmode require
+diset tpch pg_tpch_superuser $pg_user
+diset tpch pg_tpch_superuserpass $pg_pass
+diset tpch pg_tpch_defaultdbase postgres
+diset tpch pg_tpch_user $pg_user
+diset tpch pg_tpch_pass $pg_pass
+diset tpch pg_tpch_dbase $pg_db
 diset tpch pg_scale_fact $sf
 diset tpch pg_num_tpch_threads $vus
 
 print dict
 buildschema
 waittocomplete
-quit
-

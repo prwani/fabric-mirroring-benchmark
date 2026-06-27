@@ -56,6 +56,18 @@ def fabric_request(method: str, path: str, access_token: str, payload: dict | No
         raise SystemExit(f"Fabric API {method} {path} failed: {exc.code} {body}") from exc
 
 
+def resolve_capacity_id(access_token: str, capacity_id_or_name: str) -> str:
+    if "/" not in capacity_id_or_name and len(capacity_id_or_name) == 36:
+        return capacity_id_or_name
+
+    capacity_name = capacity_id_or_name.rstrip("/").split("/")[-1]
+    response = fabric_request("GET", "/capacities", access_token)
+    for capacity in response.get("value", []):
+        if capacity.get("id") == capacity_id_or_name or capacity.get("displayName") == capacity_name:
+            return capacity["id"]
+    raise SystemExit(f"Could not resolve Fabric capacity GUID for {capacity_id_or_name}")
+
+
 def find_workspace(access_token: str, display_name: str) -> dict | None:
     response = fabric_request("GET", "/workspaces", access_token)
     for item in response.get("value", []):
@@ -66,8 +78,8 @@ def find_workspace(access_token: str, display_name: str) -> dict | None:
 
 def main() -> int:
     workspace_name = env("FABRIC_WORKSPACE_NAME", "fpmb-benchmark")
-    capacity_id = env("FABRIC_CAPACITY_ID")
     access_token = token()
+    capacity_id = resolve_capacity_id(access_token, env("FABRIC_CAPACITY_ID"))
 
     workspace = find_workspace(access_token, workspace_name)
     if workspace is None:
