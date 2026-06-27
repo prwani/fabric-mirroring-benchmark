@@ -70,6 +70,7 @@ This list tracks the Microsoft Fabric mirroring source types from the Fabric ove
 | TPROC-H scale factor | `1` | Cost- and time-friendly first run; roughly 1 GB logical TPC-H scale before indexes/overhead. |
 | PostgreSQL tier/SKU | `GeneralPurpose` / `Standard_D2ds_v5` | Fabric mirroring does not support Burstable tier. |
 | PostgreSQL version | `16` | PostgreSQL 14+ is required for Fabric mirroring. |
+| PostgreSQL auth | PostgreSQL password auth + Microsoft Entra auth | Fabric mirroring setup can use either supported authentication flow. |
 | Fabric capacity SKU | `F8` | Low-cost benchmark default; compare larger SKUs only after the baseline works. |
 
 The PostgreSQL template enables logical replication prerequisites and allow-lists only user-installable PostgreSQL extensions (`uuid-ossp`, `pg_stat_statements`). Fabric-specific mirroring components are configured by the Fabric mirroring setup flow when supported by the tenant.

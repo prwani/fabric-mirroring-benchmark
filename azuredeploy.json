@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "11239423874009424382"
+      "templateHash": "14615706975260582479"
     }
   },
   "parameters": {
@@ -123,6 +123,39 @@
       "minValue": 32,
       "metadata": {
         "description": "PostgreSQL storage size in GiB."
+      }
+    },
+    "postgresEnableMicrosoftEntraAuth": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Enable Microsoft Entra authentication for PostgreSQL while keeping PostgreSQL password authentication enabled."
+      }
+    },
+    "postgresEntraAdminName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional Microsoft Entra administrator display/login name for PostgreSQL. Leave empty to enable Entra auth without assigning an admin in ARM."
+      }
+    },
+    "postgresEntraAdminObjectId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional Microsoft Entra administrator object ID for PostgreSQL. Required with postgresEntraAdminName to create the admin assignment."
+      }
+    },
+    "postgresEntraAdminPrincipalType": {
+      "type": "string",
+      "defaultValue": "User",
+      "allowedValues": [
+        "Group",
+        "ServicePrincipal",
+        "User"
+      ],
+      "metadata": {
+        "description": "Microsoft Entra principal type for the optional PostgreSQL Entra administrator."
       }
     },
     "mysqlAdminUser": {
@@ -516,6 +549,18 @@
           },
           "allowedBenchmarkIp": {
             "value": "[reference(resourceId('Microsoft.Resources/deployments', format('network-{0}', variables('token'))), '2025-04-01').outputs.publicIpAddress.value]"
+          },
+          "enableMicrosoftEntraAuth": {
+            "value": "[parameters('postgresEnableMicrosoftEntraAuth')]"
+          },
+          "entraAdminName": {
+            "value": "[parameters('postgresEntraAdminName')]"
+          },
+          "entraAdminObjectId": {
+            "value": "[parameters('postgresEntraAdminObjectId')]"
+          },
+          "entraAdminPrincipalType": {
+            "value": "[parameters('postgresEntraAdminPrincipalType')]"
           }
         },
         "template": {
@@ -525,7 +570,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "8579895266102004802"
+              "templateHash": "17559000103325746884"
             }
           },
           "parameters": {
@@ -579,6 +624,27 @@
             },
             "allowedBenchmarkIp": {
               "type": "string"
+            },
+            "enableMicrosoftEntraAuth": {
+              "type": "bool",
+              "defaultValue": true
+            },
+            "entraAdminName": {
+              "type": "string",
+              "defaultValue": ""
+            },
+            "entraAdminObjectId": {
+              "type": "string",
+              "defaultValue": ""
+            },
+            "entraAdminPrincipalType": {
+              "type": "string",
+              "defaultValue": "User",
+              "allowedValues": [
+                "Group",
+                "ServicePrincipal",
+                "User"
+              ]
             }
           },
           "variables": {
@@ -616,10 +682,25 @@
                   "mode": "Disabled"
                 },
                 "authConfig": {
-                  "activeDirectoryAuth": "Disabled",
-                  "passwordAuth": "Enabled"
+                  "activeDirectoryAuth": "[if(parameters('enableMicrosoftEntraAuth'), 'Enabled', 'Disabled')]",
+                  "passwordAuth": "Enabled",
+                  "tenantId": "[tenant().tenantId]"
                 }
               }
+            },
+            {
+              "condition": "[and(and(parameters('enableMicrosoftEntraAuth'), not(empty(parameters('entraAdminName')))), not(empty(parameters('entraAdminObjectId'))))]",
+              "type": "Microsoft.DBforPostgreSQL/flexibleServers/administrators",
+              "apiVersion": "2024-08-01",
+              "name": "[format('{0}/{1}', variables('serverName'), parameters('entraAdminObjectId'))]",
+              "properties": {
+                "principalName": "[parameters('entraAdminName')]",
+                "principalType": "[parameters('entraAdminPrincipalType')]",
+                "tenantId": "[tenant().tenantId]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('serverName'))]"
+              ]
             },
             {
               "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",

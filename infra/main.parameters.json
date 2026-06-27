@@ -15,6 +15,7 @@
     "postgresSkuName": { "value": "Standard_D2ds_v5" },
     "postgresSkuTier": { "value": "GeneralPurpose" },
     "postgresStorageGb": { "value": 128 },
+    "postgresEnableMicrosoftEntraAuth": { "value": true },
     "fabricCapacitySku": { "value": "F8" },
     "fabricAdminUpn": { "value": "REPLACE_WITH_ADMIN_UPN" }
   }

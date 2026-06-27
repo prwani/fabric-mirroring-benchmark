@@ -12,10 +12,13 @@ Important defaults:
 - `FABRIC_CAPACITY_SKU=F8`
 - `POSTGRES_SKU_TIER=GeneralPurpose`
 - `POSTGRES_SKU_NAME=Standard_D2ds_v5`
+- `POSTGRES_ENABLE_ENTRA_AUTH=true`
 
 Scale factor 1 is the default initial data-load target for TPROC-H. Increase it only after the full run works at SF=1.
 
 For non-PostgreSQL sources, set `SOURCE_TYPE` and read the matching `sources/<source>/README.md` before deployment. PostgreSQL is the only currently live-validated default path.
+
+PostgreSQL deployments keep password authentication enabled and enable Microsoft Entra authentication by default. To assign a PostgreSQL Microsoft Entra administrator during deployment, set `POSTGRES_ENTRA_ADMIN_NAME`, `POSTGRES_ENTRA_ADMIN_OBJECT_ID`, and optionally `POSTGRES_ENTRA_ADMIN_PRINCIPAL_TYPE`.
 
 ## 2. Deploy Azure resources
 

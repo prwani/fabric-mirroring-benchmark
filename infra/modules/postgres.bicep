@@ -14,6 +14,15 @@ param skuTier string = 'GeneralPurpose'
 @minValue(32)
 param storageGb int = 128
 param allowedBenchmarkIp string
+param enableMicrosoftEntraAuth bool = true
+param entraAdminName string = ''
+param entraAdminObjectId string = ''
+@allowed([
+  'Group'
+  'ServicePrincipal'
+  'User'
+])
+param entraAdminPrincipalType string = 'User'
 
 var serverName = 'psql-${projectName}-${token}'
 
@@ -46,9 +55,20 @@ resource server 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
       mode: 'Disabled'
     }
     authConfig: {
-      activeDirectoryAuth: 'Disabled'
+      activeDirectoryAuth: enableMicrosoftEntraAuth ? 'Enabled' : 'Disabled'
       passwordAuth: 'Enabled'
+      tenantId: tenant().tenantId
     }
+  }
+}
+
+resource entraAdministrator 'Microsoft.DBforPostgreSQL/flexibleServers/administrators@2024-08-01' = if (enableMicrosoftEntraAuth && !empty(entraAdminName) && !empty(entraAdminObjectId)) {
+  parent: server
+  name: entraAdminObjectId
+  properties: {
+    principalName: entraAdminName
+    principalType: entraAdminPrincipalType
+    tenantId: tenant().tenantId
   }
 }
 

@@ -42,6 +42,10 @@ az deployment group create \
     postgresSkuName="${POSTGRES_SKU_NAME:-Standard_D2ds_v5}" \
     postgresSkuTier="${POSTGRES_SKU_TIER:-GeneralPurpose}" \
     postgresStorageGb="${POSTGRES_STORAGE_GB:-128}" \
+    postgresEnableMicrosoftEntraAuth="${POSTGRES_ENABLE_ENTRA_AUTH:-true}" \
+    postgresEntraAdminName="${POSTGRES_ENTRA_ADMIN_NAME:-}" \
+    postgresEntraAdminObjectId="${POSTGRES_ENTRA_ADMIN_OBJECT_ID:-}" \
+    postgresEntraAdminPrincipalType="${POSTGRES_ENTRA_ADMIN_PRINCIPAL_TYPE:-User}" \
     mysqlAdminUser="${MYSQL_ADMIN_USER:-mysqladmin}" \
     mysqlAdminPassword="${MYSQL_ADMIN_PASSWORD:-}" \
     mysqlDatabaseName="${MYSQL_DATABASE:-tpch}" \

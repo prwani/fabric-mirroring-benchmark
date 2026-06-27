@@ -57,6 +57,23 @@ param postgresSkuTier string = 'GeneralPurpose'
 @minValue(32)
 param postgresStorageGb int = 128
 
+@description('Enable Microsoft Entra authentication for PostgreSQL while keeping PostgreSQL password authentication enabled.')
+param postgresEnableMicrosoftEntraAuth bool = true
+
+@description('Optional Microsoft Entra administrator display/login name for PostgreSQL. Leave empty to enable Entra auth without assigning an admin in ARM.')
+param postgresEntraAdminName string = ''
+
+@description('Optional Microsoft Entra administrator object ID for PostgreSQL. Required with postgresEntraAdminName to create the admin assignment.')
+param postgresEntraAdminObjectId string = ''
+
+@description('Microsoft Entra principal type for the optional PostgreSQL Entra administrator.')
+@allowed([
+  'Group'
+  'ServicePrincipal'
+  'User'
+])
+param postgresEntraAdminPrincipalType string = 'User'
+
 @description('MySQL administrator username. Used when sourceType=mysql.')
 param mysqlAdminUser string = 'mysqladmin'
 
@@ -138,6 +155,10 @@ module postgres 'modules/postgres.bicep' = if (sourceType == 'postgresql') {
     skuTier: postgresSkuTier
     storageGb: postgresStorageGb
     allowedBenchmarkIp: network.outputs.publicIpAddress
+    enableMicrosoftEntraAuth: postgresEnableMicrosoftEntraAuth
+    entraAdminName: postgresEntraAdminName
+    entraAdminObjectId: postgresEntraAdminObjectId
+    entraAdminPrincipalType: postgresEntraAdminPrincipalType
   }
 }
 
