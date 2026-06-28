@@ -50,3 +50,37 @@ TPROC-C-only latency should be described as observed table-level lag, not exact 
 4. Run marker-table bulk insert/update batches in parallel.
 5. Capture Fabric table status every 60 seconds.
 6. Repeat with higher virtual users only after the low-concurrency run is stable.
+
+## Prepared scripts
+
+The repo includes parameterized HammerDB scripts for PostgreSQL TPROC-C:
+
+```bash
+export POSTGRES_HOST="<server>.postgres.database.azure.com"
+export POSTGRES_ADMIN_USER=pgadmin
+export PGPASSWORD="<postgres-password>"
+export TPROC_C_DATABASE=tprocc
+export TPROC_C_WAREHOUSES=10
+export TPROC_C_BUILD_VUSERS=4
+export TPROC_C_VUSERS=8
+export TPROC_C_RAMPUP_MINUTES=2
+export TPROC_C_DURATION_MINUTES=10
+
+"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-build-tprocc.tcl
+"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-check-tprocc.tcl
+"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-run-tprocc.tcl
+```
+
+Create the marker table in the TPROC-C database after the schema build:
+
+```bash
+psql "host=$POSTGRES_HOST port=5432 dbname=$TPROC_C_DATABASE user=$POSTGRES_ADMIN_USER sslmode=require" \
+  -v ON_ERROR_STOP=1 \
+  -f scripts/provision/setup-tprocc-marker.sql
+```
+
+## Fabric mirroring setup
+
+Create a new Fabric mirrored database item for the `tprocc` PostgreSQL database, or add a separate mirroring configuration if your tenant workflow supports it. Select the TPROC-C tables and `public.fabric_cdc_latency_marker`.
+
+Keep this separate from the TPROC-H mirrored database so the existing `tpch` baseline remains stable.

@@ -300,3 +300,13 @@ Include this short activity split in the blog:
 ## 13. TPROC-C follow-up
 
 Use `docs/tproc-c-plan.md` for the next write-heavy benchmark design. The recommended model is to run HammerDB TPROC-C for realistic transactional pressure while keeping marker-table batches as the precise latency probe.
+
+Prepared scripts:
+
+```bash
+"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-build-tprocc.tcl
+"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-check-tprocc.tcl
+"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-run-tprocc.tcl
+```
+
+Run TPROC-C in a separate PostgreSQL database, then configure Fabric mirroring for that database before collecting CDC results under load.
