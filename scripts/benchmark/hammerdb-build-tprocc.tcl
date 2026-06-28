@@ -13,6 +13,8 @@ set pg_user [env_or_default POSTGRES_ADMIN_USER "pgadmin"]
 set pg_pass $::env(PGPASSWORD)
 set pg_defaultdbase [env_or_default POSTGRES_DEFAULT_DATABASE "postgres"]
 set pg_db [env_or_default TPROC_C_DATABASE "tprocc"]
+set bench_user [env_or_default TPROC_C_USER "tprocc"]
+set bench_pass [env_or_default TPROC_C_PASSWORD $pg_pass]
 set warehouses [env_or_default TPROC_C_WAREHOUSES "10"]
 set build_vusers [env_or_default TPROC_C_BUILD_VUSERS "4"]
 set tablespace [env_or_default TPROC_C_TABLESPACE "pg_default"]
@@ -31,8 +33,8 @@ diset tpcc pg_num_vu $build_vusers
 diset tpcc pg_superuser $pg_user
 diset tpcc pg_superuserpass $pg_pass
 diset tpcc pg_defaultdbase $pg_defaultdbase
-diset tpcc pg_user $pg_user
-diset tpcc pg_pass $pg_pass
+diset tpcc pg_user $bench_user
+diset tpcc pg_pass $bench_pass
 diset tpcc pg_dbase $pg_db
 diset tpcc pg_tspace $tablespace
 diset tpcc pg_storedprocs true

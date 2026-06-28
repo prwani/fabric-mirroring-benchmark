@@ -304,6 +304,10 @@ Use `docs/tproc-c-plan.md` for the next write-heavy benchmark design. The recomm
 Prepared scripts:
 
 ```bash
+export TPROC_C_DATABASE=tprocc
+export TPROC_C_USER=tprocc
+export TPROC_C_PASSWORD="<benchmark-user-password>"
+
 "${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-build-tprocc.tcl
 "${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-check-tprocc.tcl
 "${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-run-tprocc.tcl

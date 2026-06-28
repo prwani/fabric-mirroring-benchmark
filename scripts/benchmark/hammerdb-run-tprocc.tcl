@@ -13,6 +13,8 @@ set pg_user [env_or_default POSTGRES_ADMIN_USER "pgadmin"]
 set pg_pass $::env(PGPASSWORD)
 set pg_defaultdbase [env_or_default POSTGRES_DEFAULT_DATABASE "postgres"]
 set pg_db [env_or_default TPROC_C_DATABASE "tprocc"]
+set bench_user [env_or_default TPROC_C_USER "tprocc"]
+set bench_pass [env_or_default TPROC_C_PASSWORD $pg_pass]
 set vusers [env_or_default TPROC_C_VUSERS "8"]
 set rampup [env_or_default TPROC_C_RAMPUP_MINUTES "2"]
 set duration [env_or_default TPROC_C_DURATION_MINUTES "10"]
@@ -30,8 +32,8 @@ diset connection pg_sslmode require
 diset tpcc pg_superuser $pg_user
 diset tpcc pg_superuserpass $pg_pass
 diset tpcc pg_defaultdbase $pg_defaultdbase
-diset tpcc pg_user $pg_user
-diset tpcc pg_pass $pg_pass
+diset tpcc pg_user $bench_user
+diset tpcc pg_pass $bench_pass
 diset tpcc pg_dbase $pg_db
 diset tpcc pg_driver timed
 diset tpcc pg_total_iterations $total_iterations
