@@ -1,6 +1,16 @@
 # HammerDB CLI script for SQL Server/Azure SQL Database TPROC-C schema build.
 # Override values with env vars before invoking hammerdbcli auto.
 
+if {![info exists ::env(TMPDIR)] || $::env(TMPDIR) eq ""} {
+    set ::env(TMPDIR) "/tmp"
+}
+if {![info exists ::env(TMP)] || $::env(TMP) eq ""} {
+    set ::env(TMP) $::env(TMPDIR)
+}
+if {![info exists ::env(TEMP)] || $::env(TEMP) eq ""} {
+    set ::env(TEMP) $::env(TMPDIR)
+}
+
 set sql_host $::env(AZURE_SQL_HOST)
 set sql_port [expr {[info exists ::env(AZURE_SQL_PORT)] ? $::env(AZURE_SQL_PORT) : "1433"}]
 set sql_user [expr {[info exists ::env(AZURE_SQL_HAMMERDB_LOGIN)] ? $::env(AZURE_SQL_HAMMERDB_LOGIN) : $::env(AZURE_SQL_ADMIN_USER)}]

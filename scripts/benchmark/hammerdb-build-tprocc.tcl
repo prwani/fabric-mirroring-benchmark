@@ -1,5 +1,15 @@
 # HammerDB CLI script for PostgreSQL TPROC-C schema build.
 
+if {![info exists ::env(TMPDIR)] || $::env(TMPDIR) eq ""} {
+    set ::env(TMPDIR) "/tmp"
+}
+if {![info exists ::env(TMP)] || $::env(TMP) eq ""} {
+    set ::env(TMP) $::env(TMPDIR)
+}
+if {![info exists ::env(TEMP)] || $::env(TEMP) eq ""} {
+    set ::env(TEMP) $::env(TMPDIR)
+}
+
 proc env_or_default {name default} {
     if {[info exists ::env($name)] && $::env($name) ne ""} {
         return $::env($name)
