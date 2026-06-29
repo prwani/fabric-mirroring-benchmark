@@ -77,7 +77,10 @@ The PostgreSQL template enables logical replication prerequisites and allow-list
 
 ## Blog
 
-The blog draft in `docs/blog.md` now tracks the TPROC-C-only benchmark direction.
+The blog series index is in `docs/blog.md`. Source-specific posts are split by adapter so each benchmark result remains independently reusable:
+
+- `docs/blog-postgresql-tprocc.md`
+- `docs/blog-azure-sql-db-tprocc.md`
 
 Static validation available before live deployment:
 
