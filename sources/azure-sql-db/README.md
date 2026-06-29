@@ -73,6 +73,15 @@ sqlcmd -C -S "$AZURE_SQL_HOST" -d "$AZURE_SQL_DATABASE" \
   -i scripts/provision/setup-azure-sql-mirroring-prereqs.sql
 ```
 
+If `CREATE USER ... FROM EXTERNAL PROVIDER` fails because the SQL server identity does not have Directory Readers, create the contained database user by Entra object ID from the benchmark VM managed identity:
+
+```bash
+export FABRIC_ENTRA_PRINCIPAL="user-or-group-used-in-fabric"
+export FABRIC_ENTRA_OBJECT_ID="<entra-object-id>"
+export FABRIC_ENTRA_PRINCIPAL_TYPE=E # E=user/app, X=group
+python3 scripts/provision/grant-azure-sql-fabric-entra-principal-msi.py
+```
+
 ## HammerDB workload
 
 Use **TPROC-C** for Azure SQL mirroring latency tests because Azure SQL Database is most commonly mirrored from an OLTP application source.

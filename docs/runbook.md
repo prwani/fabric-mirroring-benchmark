@@ -67,6 +67,15 @@ export AZURE_SQL_AUTH_MODE=entra
 export AZURE_SQL_MSI_OBJECT_ID="<benchmark VM principalId>"
 ```
 
+If Fabric Organizational account authentication is used, the same Entra user or group must exist as a contained user in the benchmark database with mirroring permissions. In tenants where Azure SQL cannot look up Entra users because the SQL server identity lacks Directory Readers, grant by object ID:
+
+```bash
+export FABRIC_ENTRA_PRINCIPAL="<UPN or group display name used in Fabric>"
+export FABRIC_ENTRA_OBJECT_ID="<Entra object ID>"
+export FABRIC_ENTRA_PRINCIPAL_TYPE=E # E=user/app, X=group
+python3 scripts/provision/grant-azure-sql-fabric-entra-principal-msi.py
+```
+
 Record deployment outputs in `.env`, especially:
 
 - `POSTGRES_HOST`
