@@ -40,7 +40,7 @@ This list tracks the Microsoft Fabric mirroring source types from the Fabric ove
 | Azure Databricks | Metadata mirroring | Roadmap |
 | Azure Database for PostgreSQL | Database mirroring | Implemented and live deployment validated |
 | Azure Database for MySQL | Database mirroring, preview | Infra adapter implemented; mirroring validation pending |
-| Azure SQL Database | Database mirroring | TPROC-C infra and HammerDB MSI path implemented; Fabric mirroring validation pending |
+| Azure SQL Database | Database mirroring | TPROC-C deployment, HammerDB MSI path, Fabric mirroring, and post-mirroring tests live-validated |
 | Azure SQL Managed Instance | Database mirroring | Experimental high-cost adapter scaffold; validation pending |
 | Dremio | Metadata mirroring, preview | Roadmap |
 | Google BigQuery | Database mirroring, preview | Roadmap |
@@ -57,7 +57,7 @@ This list tracks the Microsoft Fabric mirroring source types from the Fabric ove
 |---|---|---|---|---|
 | `sources/postgresql/` | Yes | TPROC-C scripts available | Default path live deployment validated | Uses PostgreSQL Flexible Server, logical WAL, transactional TPROC-C tables, and marker table. |
 | `sources/mysql/` | Yes | HammerDB-compatible source docs | Pending | MySQL mirroring is preview/tenant-gated; validate availability before benchmarking. |
-| `sources/azure-sql-db/` | Yes | SQL Server TPROC-C scripts available | Pending | Uses vCore Azure SQL Database, Entra-only by default, VM managed identity for HammerDB, and shared VM/Fabric provisioning. |
+| `sources/azure-sql-db/` | Yes | SQL Server TPROC-C scripts available | Live deployment validated | Uses vCore Azure SQL Database, Entra-only by default, VM managed identity for HammerDB, and shared VM/Fabric provisioning. |
 | `sources/sql-mi/` | Scaffold | HammerDB-compatible source docs | Pending | High-cost/long-running deployment; use only for deliberate tests. |
 | `sources/sql-server/` | Scaffold | HammerDB-compatible source docs | Pending | SQL Server mirroring usually requires gateway + CDC/Agent unless using newer supported paths. |
 

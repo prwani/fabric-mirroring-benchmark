@@ -42,7 +42,26 @@ Validated settings:
 
 ## Steps
 
-1. Deploy a fresh Azure SQL Database source:
+1. Deploy a fresh Azure SQL Database benchmark environment.
+
+   The easiest path is the **Deploy to Azure** button. It uses the repository's `azuredeploy.json` ARM template and opens the Azure Portal custom deployment experience:
+
+   [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fprwani%2Ffabric-mirroring-benchmark%2Fmain%2Fazuredeploy.json)
+
+   In the deployment form, set:
+
+   | Parameter | Value |
+   |---|---|
+   | `sourceType` | `azure-sql-db` |
+   | `location` | `swedencentral`, or another region where all required services are available |
+   | `azureSqlDatabaseName` | `tprocc` |
+   | `azureSqlAzureAdOnlyAuthentication` | `true` for Entra-only tenants |
+   | `sqlEntraAdminLogin` / `sqlEntraAdminObjectId` | The Entra admin principal for the Azure SQL server |
+   | `fabricCapacitySku` | `F8` for the baseline run |
+
+   This deploys the Azure resources: Azure SQL Database, benchmark VM, Fabric capacity, networking, firewall rules, and monitoring. It does **not** complete the Fabric mirrored database connection, because that step depends on tenant-specific Fabric prompts and authentication.
+
+   If you prefer a CLI-based installation, or you are using an AI agent to drive the setup from a terminal, use the script path:
 
    ```bash
    SOURCE_TYPE=azure-sql-db \
@@ -51,7 +70,7 @@ Validated settings:
    scripts/provision/deploy-azure.sh
    ```
 
-2. For Entra-only tenants, set the VM managed identity as SQL Entra admin for this isolated benchmark server:
+2. For Entra-only tenants, set the VM managed identity as SQL Entra admin for this isolated benchmark server if you want HammerDB to connect through the VM managed identity:
 
    ```bash
    export AZURE_SQL_SERVER_NAME="<server-name>"
