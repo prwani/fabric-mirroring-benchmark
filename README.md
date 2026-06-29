@@ -81,6 +81,7 @@ The blog series index is in `docs/blog.md`. Source-specific posts are split by a
 
 - `docs/blog-postgresql-tprocc.md`
 - `docs/blog-azure-sql-db-tprocc.md`
+- `docs/blog-azure-sql-db-tprocc.html` for the portal-ready Azure SQL Database draft
 
 Static validation available before live deployment:
 

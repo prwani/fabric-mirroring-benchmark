@@ -1,0 +1,286 @@
+<h1>Benchmarking Microsoft Fabric Mirroring with Azure SQL Database and HammerDB TPROC-C</h1>
+
+<p>This post is part of a benchmark series for Microsoft Fabric Mirroring across operational database sources. This article focuses on <strong>Azure SQL Database</strong> as the source system and <strong>HammerDB TPROC-C</strong> as the transactional workload.</p>
+
+<p>The goal is not to publish a universal service-level number. The goal is to provide a reproducible way to deploy a source system, generate an OLTP dataset, configure Fabric Mirroring, and measure how quickly data becomes queryable through the Fabric SQL endpoint for specific test scenarios.</p>
+
+<h2>What is Microsoft Fabric Mirroring?</h2>
+
+<p>Microsoft Fabric Mirroring continuously replicates supported operational data sources into Fabric so the data can be queried and analyzed without building a custom ETL pipeline. For this benchmark, Azure SQL Database is mirrored into a Fabric mirrored database. The validation queries run against the mirrored database SQL endpoint.</p>
+
+<p>The benchmark uses HammerDB <strong>TPROC-C</strong> because Fabric Mirroring sources are usually transactional systems. TPROC-C gives us an initial OLTP-shaped dataset, ongoing transactional changes, and a large <code>stock</code> table that can be used for controlled bulk-update tests.</p>
+
+<pre><code>HammerDB VM
+  -&gt; Azure SQL Database
+      -&gt; Microsoft Fabric Mirroring
+          -&gt; Fabric mirrored database SQL endpoint
+              -&gt; Row-count and CDC visibility checks
+</code></pre>
+
+<h2>Prerequisites</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Requirement</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>Azure subscription</td><td>Permission to deploy a resource group, Azure SQL Database, VM, Fabric capacity, networking, firewall rules, and monitoring resources.</td></tr>
+    <tr><td>Microsoft Fabric tenant</td><td>Permission to create a workspace, assign Fabric capacity, and create mirrored database items.</td></tr>
+    <tr><td>Azure SQL supported tier</td><td>This validation used Azure SQL Database vCore General Purpose.</td></tr>
+    <tr><td>Fabric account</td><td>This run used <strong>Organizational account</strong> authentication for the Azure SQL mirrored database connection.</td></tr>
+    <tr><td>Benchmark VM managed identity</td><td>Used by HammerDB to connect to Azure SQL in an Entra-only tenant.</td></tr>
+    <tr><td>HammerDB</td><td>HammerDB 5.0 was used for the SQL Server TPROC-C workload.</td></tr>
+    <tr><td>SQL tools</td><td><code>sqlcmd</code> and the SQL Server ODBC driver are required on the benchmark VM.</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Validated environment</strong></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Setting</th>
+      <th>Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>Region</td><td><code>swedencentral</code></td></tr>
+    <tr><td>Azure SQL server</td><td><code>sql-fsqlmb-53vwnrvnudnko.database.windows.net</code></td></tr>
+    <tr><td>Database</td><td><code>tprocc</code></td></tr>
+    <tr><td>Azure SQL SKU during final build</td><td><code>GP_Gen5_4</code></td></tr>
+    <tr><td>Workload</td><td>HammerDB TPROC-C</td></tr>
+    <tr><td>TPROC-C scale</td><td>10 warehouses</td></tr>
+    <tr><td>Build virtual users</td><td>4</td></tr>
+    <tr><td>Fabric workspace</td><td><code>fsqlmb-benchmark</code></td></tr>
+    <tr><td>Mirrored database item</td><td><code>tprocc</code></td></tr>
+    <tr><td>Mirroring option</td><td>Add any new tables to replication enabled</td></tr>
+  </tbody>
+</table>
+
+<h2>Deployment instructions</h2>
+
+<h3>1. Deploy Azure resources</h3>
+
+<p>The easiest deployment path is the <strong>Deploy to Azure</strong> button. It uses the repository's <code>azuredeploy.json</code> ARM template and opens the Azure Portal custom deployment experience:</p>
+
+<p><a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fprwani%2Ffabric-mirroring-benchmark%2Fmain%2Fazuredeploy.json"><img src="https://aka.ms/deploytoazurebutton" alt="Deploy to Azure" /></a></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parameter</th>
+      <th>Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><code>sourceType</code></td><td><code>azure-sql-db</code></td></tr>
+    <tr><td><code>location</code></td><td><code>swedencentral</code>, or another region where Azure SQL Database, VM, and Fabric capacity are available</td></tr>
+    <tr><td><code>azureSqlDatabaseName</code></td><td><code>tprocc</code></td></tr>
+    <tr><td><code>azureSqlAzureAdOnlyAuthentication</code></td><td><code>true</code> for Entra-only tenants</td></tr>
+    <tr><td><code>sqlEntraAdminLogin</code> / <code>sqlEntraAdminObjectId</code></td><td>The Entra admin principal for the Azure SQL server</td></tr>
+    <tr><td><code>fabricCapacitySku</code></td><td><code>F8</code> for the baseline run</td></tr>
+  </tbody>
+</table>
+
+<p>The template deploys the Azure resources: Azure SQL Database, benchmark VM, Fabric capacity, networking, firewall rules, and monitoring. Fabric mirrored database setup remains an interactive Fabric step because authentication prompts and tenant permissions vary.</p>
+
+<p>If you prefer a terminal-driven setup, or you are using an AI agent to run the deployment, use the CLI script path:</p>
+
+<pre><code class="language-bash">SOURCE_TYPE=azure-sql-db \
+AZURE_RESOURCE_GROUP=rg-fabric-sqldb-mirror-bench \
+PROJECT_NAME=fsqlmb \
+scripts/provision/deploy-azure.sh
+</code></pre>
+
+<h3>2. Configure Azure SQL authentication for HammerDB</h3>
+
+<p>In this tenant, Azure SQL was configured for Entra-only authentication. HammerDB connected from the benchmark VM through the VM managed identity.</p>
+
+<pre><code class="language-bash">export AZURE_SQL_SERVER_NAME="&lt;server-name&gt;"
+export BENCHMARK_VM_NAME="&lt;vm-name&gt;"
+scripts/provision/setup-azure-sql-vm-mi-admin.sh
+</code></pre>
+
+<p>Then configure HammerDB to use Entra/MSI authentication and keep BCP disabled:</p>
+
+<pre><code class="language-bash">export AZURE_SQL_AUTH_MODE=entra
+export AZURE_SQL_MSI_OBJECT_ID="&lt;benchmark-vm-managed-identity-object-id&gt;"
+export AZURE_SQL_TPROC_C_DATABASE=tprocc
+export AZURE_SQL_TPROC_C_USE_BCP=false
+
+"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-build-sqlserver-tprocc.tcl
+</code></pre>
+
+<p>BCP was disabled because the HammerDB BCP load path attempted SQL authentication in this Entra-only validation. The ODBC/MSI path worked reliably.</p>
+
+<h3>3. Prepare benchmark columns and marker table</h3>
+
+<p>Add benchmark-owned columns to <code>dbo.stock</code> before Fabric Mirroring starts. This ensures the large-update scenario is included in the first replication attempt rather than relying on post-mirroring schema changes for the largest table.</p>
+
+<pre><code class="language-bash">sqlcmd $AZURE_SQL_SQLCMD_ARGS \
+  -i scripts/provision/setup-tprocc-benchmark-columns-azure-sql.sql
+</code></pre>
+
+<p>Create the marker table used for controlled CDC visibility checks:</p>
+
+<pre><code class="language-bash">python3 scripts/provision/setup-azure-sql-cdc-marker-msi.py
+</code></pre>
+
+<h3>4. Grant the Fabric principal access to Azure SQL</h3>
+
+<p>For this run, the Fabric mirrored database connection used Organizational account authentication. The same Entra principal needed a contained Azure SQL database user and mirroring permissions.</p>
+
+<pre><code class="language-bash">export FABRIC_ENTRA_PRINCIPAL="&lt;UPN used in Fabric&gt;"
+export FABRIC_ENTRA_OBJECT_ID="&lt;Entra object ID&gt;"
+export FABRIC_ENTRA_PRINCIPAL_TYPE=E
+python3 scripts/provision/grant-azure-sql-fabric-entra-principal-msi.py
+</code></pre>
+
+<p>The helper grants the permissions needed by Fabric Mirroring, including <code>SELECT</code>, <code>ALTER ANY EXTERNAL MIRROR</code>, <code>VIEW DATABASE PERFORMANCE STATE</code>, and <code>VIEW DATABASE SECURITY STATE</code>.</p>
+
+<h3>5. Create the Fabric mirrored database</h3>
+
+<ol>
+  <li>Create or open the benchmark workspace.</li>
+  <li>Create a mirrored Azure SQL Database item.</li>
+  <li>Connect to the <code>tprocc</code> Azure SQL database.</li>
+  <li>Use Organizational account authentication if that is the working path in your tenant.</li>
+  <li>Select the TPROC-C tables and <code>dbo.fabric_cdc_latency_marker</code>, or mirror all data.</li>
+  <li>Enable <strong>add any new tables to replication</strong> if you want to run the new-table scenario.</li>
+</ol>
+
+<h2>Benchmark scenarios and test files</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Scenario</th>
+      <th>Purpose</th>
+      <th>Script or query file</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>Initial sync parity</td><td>Confirms the TPROC-C tables are visible in Fabric with matching row counts.</td><td><code>scripts/benchmark/measure-initial-sync.py</code></td></tr>
+    <tr><td>Marker insert latency</td><td>Writes controlled marker rows to Azure SQL and polls Fabric until each marker appears.</td><td><code>scripts/benchmark/run-cdc-latency-test.py</code></td></tr>
+    <tr><td>New table auto-replication</td><td>Creates a new source table after mirroring starts and checks whether Fabric auto-adds it.</td><td><code>scripts/benchmark/run-new-table-auto-replication-test.py</code></td></tr>
+    <tr><td>Large stock update</td><td>Updates benchmark-owned columns on 100,000 rows in <code>dbo.stock</code> and waits for all updated rows in Fabric.</td><td><code>scripts/benchmark/run-stock-bulk-update.py</code></td></tr>
+    <tr><td>Small-table schema evolution</td><td>Adds a post-mirroring benchmark column to <code>dbo.warehouse</code>.</td><td><code>scripts/provision/setup-tprocc-schema-evolution-azure-sql.sql</code> and <code>scripts/benchmark/check-fabric-table-schema.py</code></td></tr>
+    <tr><td>Fabric status capture</td><td>Captures Fabric table mirroring status snapshots where the API is available.</td><td><code>scripts/benchmark/capture-fabric-mirroring-status.py</code></td></tr>
+  </tbody>
+</table>
+
+<h2>Run or modify the tests</h2>
+
+<p>The benchmark scripts are parameterized through command-line arguments and environment variables. Start with the default 10 TPROC-C warehouses, then change one variable at a time.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Setting</th>
+      <th>Environment variable or argument</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>TPROC-C size</td><td><code>TPROC_C_WAREHOUSES</code></td><td><code>10</code></td></tr>
+    <tr><td>Marker batches</td><td><code>CDC_MARKER_BATCHES</code></td><td><code>60</code></td></tr>
+    <tr><td>Marker write interval</td><td><code>CDC_MARKER_INTERVAL_SECONDS</code></td><td><code>5</code></td></tr>
+    <tr><td>Poll interval</td><td><code>CDC_POLL_INTERVAL_SECONDS</code></td><td><code>5</code> for marker checks, <code>15</code> for some batch scenarios</td></tr>
+    <tr><td>Stock update size</td><td><code>STOCK_UPDATE_BATCH_SIZE</code> / <code>--batch-size</code></td><td><code>100000</code></td></tr>
+    <tr><td>New table rows</td><td><code>NEW_TABLE_TEST_ROWS</code> / <code>--rows</code></td><td><code>1000</code></td></tr>
+  </tbody>
+</table>
+
+<pre><code class="language-bash">python3 scripts/benchmark/run-cdc-latency-test.py \
+  --source-type azure-sql-db \
+  --source-sqlcmd-args "$AZURE_SQL_SQLCMD_ARGS" \
+  --fabric-sqlcmd-args "$FABRIC_SQLCMD_ARGS" \
+  --fabric-marker-table dbo.fabric_cdc_latency_marker \
+  --poll-seconds 1 \
+  --batches 30
+</code></pre>
+
+<pre><code class="language-bash">python3 scripts/benchmark/run-stock-bulk-update.py \
+  --source-type azure-sql-db \
+  --source-sqlcmd-args "$AZURE_SQL_SQLCMD_ARGS" \
+  --batch-size 100000 \
+  --fabric-sqlcmd-args "$FABRIC_SQLCMD_ARGS" \
+  --fabric-stock-table "dbo.stock" \
+  --poll-seconds 1
+</code></pre>
+
+<p>For publication-quality numbers, run each scenario multiple times, keep the polling interval low, and save the raw CSV/JSON outputs with the Azure SQL SKU, Fabric capacity SKU, TPROC-C warehouse count, and time window.</p>
+
+<h2>Measurement notes</h2>
+
+<p>The scripts measure <strong>user-observed visibility</strong> through the Fabric SQL endpoint. They record the source commit timestamp, poll the Fabric SQL endpoint, and record the first time the expected row or row count is visible.</p>
+
+<p>That means each number is an observed upper bound, not an exact internal replication timestamp. If the poll interval is 15 seconds, the actual visibility could have happened up to 15 seconds before the script detected it. SQL endpoint session freshness and Fabric status API refresh timing can also affect when a polling client observes the change.</p>
+
+<p>For the most reliable comparison, use <code>--poll-seconds 1</code>, reconnect or use fresh Fabric SQL endpoint sessions during polling if stale reads are suspected, capture Fabric mirroring status snapshots, repeat each scenario, and publish min, p50, p95, and max instead of a single run. Treat new-table auto-replication and schema evolution separately from row-level CDC because they include control-plane/table-discovery work.</p>
+
+<h2>Benchmark results from this run</h2>
+
+<h3>Initial sync</h3>
+
+<p>Initial row-count parity succeeded:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Table</th>
+      <th>Source rows</th>
+      <th>Fabric rows</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><code>dbo.warehouse</code></td><td>10</td><td>10</td></tr>
+    <tr><td><code>dbo.district</code></td><td>100</td><td>100</td></tr>
+    <tr><td><code>dbo.item</code></td><td>100,000</td><td>100,000</td></tr>
+    <tr><td><code>dbo.stock</code></td><td>1,000,000</td><td>1,000,000</td></tr>
+    <tr><td><code>dbo.customer</code></td><td>300,000</td><td>300,000</td></tr>
+    <tr><td><code>dbo.orders</code></td><td>300,000</td><td>300,000</td></tr>
+    <tr><td><code>dbo.order_line</code></td><td>3,000,481</td><td>3,000,481</td></tr>
+    <tr><td><code>dbo.new_order</code></td><td>90,000</td><td>90,000</td></tr>
+    <tr><td><code>dbo.history</code></td><td>300,000</td><td>300,000</td></tr>
+  </tbody>
+</table>
+
+<h3>Post-mirroring scenarios</h3>
+
+<p>These are live-observed results from the validation environment. They should be read as first-run observed visibility measurements, not as definitive product limits.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Scenario</th>
+      <th>Observed result</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>Marker insert visibility</td><td>354.6 seconds</td></tr>
+    <tr><td>New table auto-replication, 1,000 rows</td><td>151.9 seconds</td></tr>
+    <tr><td><code>warehouse</code> schema evolution and 2 updated rows</td><td>430.2 seconds</td></tr>
+    <tr><td><code>stock</code> 100K-row update visibility</td><td>174.2 seconds</td></tr>
+  </tbody>
+</table>
+
+<p>The new-table scenario confirmed that Fabric picked up <code>dbo.fabric_auto_table_125329_c687</code> automatically because <strong>add any new tables to replication</strong> was enabled.</p>
+
+<p>The large-update scenario used the TPROC-C <code>stock</code> table. At 10 warehouses, <code>stock</code> contains 1,000,000 rows. The test updated 100,000 rows and Fabric showed all 100,000 updated rows after about 174 seconds from the last source update timestamp.</p>
+
+<p>The marker, new-table, schema-evolution, and stock-update numbers should be rerun with a 1-second poll interval and repeated trials before publication if the blog needs precise benchmark statistics.</p>
+
+<h2>Lessons learned</h2>
+
+<ul>
+  <li>Scale Azure SQL before starting HammerDB builds. Scaling during a build can interrupt ODBC sessions.</li>
+  <li>For Azure SQL Entra-only tenants, HammerDB works through ODBC/MSI, but the SQL Server BCP load path attempted SQL authentication in this validation.</li>
+  <li>Fabric Organizational account authentication required the same Entra user to exist as a contained database user with mirroring permissions.</li>
+  <li>Fabric mirroring status APIs and Fabric SQL endpoint visibility can differ briefly.</li>
+  <li>New-table auto-replication and schema evolution are useful operational tests, but they should not be interpreted as pure row-level CDC latency.</li>
+  <li>Keep source-system posts separate as the benchmark series expands.</li>
+</ul>

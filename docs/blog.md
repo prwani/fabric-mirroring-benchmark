@@ -13,6 +13,6 @@ This repository tracks a benchmark series for Microsoft Fabric Mirroring across 
 | Source system | Blog post | Status |
 |---|---|---|
 | Azure Database for PostgreSQL Flexible Server | [`blog-postgresql-tprocc.md`](blog-postgresql-tprocc.md) | Validated |
-| Azure SQL Database | [`blog-azure-sql-db-tprocc.md`](blog-azure-sql-db-tprocc.md) | Validated |
+| Azure SQL Database | [`blog-azure-sql-db-tprocc.md`](blog-azure-sql-db-tprocc.md), [`blog-azure-sql-db-tprocc.html`](blog-azure-sql-db-tprocc.html) | Validated; HTML draft available for Tech Community publishing |
 
 Future source systems should get their own post instead of replacing an existing one.
