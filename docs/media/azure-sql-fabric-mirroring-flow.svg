@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="520" viewBox="0 0 1280 520" role="img" aria-labelledby="title desc">
+  <title id="title">HammerDB to Azure SQL Database to Microsoft Fabric Mirroring benchmark flow</title>
+  <desc id="desc">Architecture diagram showing a HammerDB virtual machine sending TPROC-C workload to Azure SQL Database, Microsoft Fabric Mirroring replicating the data into a mirrored database SQL endpoint, and benchmark checks for row counts and CDC visibility.</desc>
+  <defs>
+    <linearGradient id="azureBlue" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#59B4D9"/>
+      <stop offset="100%" stop-color="#0078D4"/>
+    </linearGradient>
+    <linearGradient id="fabricGreen" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#8DE971"/>
+      <stop offset="100%" stop-color="#00A562"/>
+    </linearGradient>
+    <linearGradient id="fabricCyan" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#6CE5E8"/>
+      <stop offset="100%" stop-color="#00A2C7"/>
+    </linearGradient>
+    <linearGradient id="sqlPurple" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#B99CFF"/>
+      <stop offset="100%" stop-color="#5C2D91"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#1F2937" flood-opacity="0.18"/>
+    </filter>
+    <marker id="arrow" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L12,7 L2,12 Z" fill="#0078D4"/>
+    </marker>
+    <style>
+      .label { font-family: "Segoe UI", Arial, sans-serif; fill: #1F2937; font-size: 23px; font-weight: 600; }
+      .small { font-family: "Segoe UI", Arial, sans-serif; fill: #4B5563; font-size: 16px; }
+      .tiny { font-family: "Segoe UI", Arial, sans-serif; fill: #4B5563; font-size: 14px; }
+      .panel-title { font-family: "Segoe UI", Arial, sans-serif; fill: #1F2937; font-size: 20px; font-weight: 600; }
+      .arrow-label { font-family: "Segoe UI", Arial, sans-serif; fill: #0078D4; font-size: 15px; font-weight: 600; }
+      .card { fill: #FFFFFF; stroke: #D1D5DB; stroke-width: 1.5; rx: 22; filter: url(#shadow); }
+    </style>
+  </defs>
+
+  <rect width="1280" height="520" fill="#F8FAFC"/>
+  <rect x="24" y="24" width="1232" height="472" rx="28" fill="#FFFFFF" stroke="#E5E7EB"/>
+
+  <text x="54" y="72" class="label">Fabric Mirroring benchmark flow</text>
+  <text x="54" y="100" class="small">HammerDB TPROC-C workload replicated from Azure SQL Database into Microsoft Fabric for row-count and CDC visibility checks.</text>
+
+  <rect x="52" y="150" width="190" height="220" class="card"/>
+  <image x="95" y="162" width="104" height="114" preserveAspectRatio="xMidYMid meet" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUUAAAFjCAYAAACqgRl2AAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+kIHxQ4D1maRiQAAA4FSURBVHja7d3rbRtJFoDR6wET4IYgJ0BADkEOQQ5BHYIdghRCKwQ7BDOEEcAEzBSUAAHtjy6Or60XJTb7eQ4geMaYXYr9+FhdXSQ/PDw8xJAsVtV5RCwjYv8nx9nuf3abemtzvPl4PIuI/MPEj80PQ4jiYlVdRcRF+RHC07mPiHVErHeb+tbmePZ4vIiIy3I8CuHMjs1eo7hYVV8j4sqB14ttRHzbbeofNsV/x+MyIr5HE0P6PTar3aZe9/HgvUSxHHzX0QSRflVGjf9N23wPL9BD8qWPF+1/enqydQjiUNRl+mLuBHGYx2bn+6TzKJZL5kv7e1Cuy+h9lsqLgiAOzzIivnb9oH2MFL8GDr5hMVIe8L7p+gW70yiWV2R3lwd68M3xSZcT7tzuH7ROb3z9M+Unx5ssy82GuRFE++gP/0z5yfFmc3zR8kI9fNOMYrlMMZk9bPYPs9flSNEocfjmGEUvBMM36TlFGBo3/viDKAIkogiQiCJAIooAiSgCJKIIkIgiQCKKAIkoAiSiCJCIIkAiigCJKAIkogiQiCJAIooAiSgCJKIIkIgiQCKKAIkoAiSiCJCIIkAiigCJKAIkogiQiCJAIooAiSgCJKIIkIgiQCKKAIkoAiSiCJCIIkAiigCJKAIkogiQiCJAIooAiSgCJKIIkIgiQCKKAIkoAiSiCJCIIkAiigCJKAIkogiQiCJAIooAiSgCJKIIkIgiQCKKAIkoAiSiCJCIIkAiigCJKAIkogiQiCJAIooAiSgCJKIIkIgiQCKKAIkoAiSiCJCIIkAiigCJKAIkogiQiCJAIooAiSgCJKIIkIgiQCKKAIkoAiSiCJCIIkAiigCJKAIkogiQiCJAIooAiSgCJKIIkIgiQCKKAIkoAiSiCJCIIkAiigDJwiZggNZP/N2FzUIXRJFTuouI+/JnRMS2/EREbHebetvKQbyqziNimf4q//t5+XOZ/hmeP55sAlqyjYgfUSK429Trrh54t6nv/vqrFx97sar2o859PPexNBpFFA90W060u7eObv4axTz1z2MevdxFE8L1E2EarBTs9RP7a79P8v45Kz/MwIeHh4dOHqi8Ov8c2fZZR0TV1mXeC9tmf9JdlJNw6COWHxFx2+VocAjKMbzfVzmcnNhuU3/o6rFE8Xm3u01d9XgCXkXEZQwrkNtoXiRmFcNX9tOy7KP9jxHlCYhi/37sNvWXgZx0ZxHxNSKuev5V1hHxZbep752iL+6v8/j9YubGTktEsV/3EfFxaCd/2X7XPZ1ovY6ax6q8oF2WH4E8gij262a3qb8N+ES7jmbk2JVvu01947Q8er/tA3kVLrHfrMsoekfLY4OeLyvB/hS/1/udUiWIre237W5T3+w29ceI+BzNigYGSBQfH7yDv4lQlr98iohTBes+mvlDJ+6JjrEyHfG/iPgW3bzAcSCXz48P2A9D/x2f2K7fo72lIfcR8XlM6w6nYKCrDWZ5Xhopjv9gWUfEx2hGjcfeHLqL5iaTIHa/H293m/pzNJfWP2yR/ojiNE6o+zTXeBvvi+PNblN/suSm9325LsvBPoY49kIUp3VCbctc1cc4fK7qNprR4WDvuM94X36JZuRosXyHzCk+PhhHNad4wHbPb0nL7nab2khkPPuxz3WqszovfSDE9A+m/cd1CeC49+M6Ij6VGzLX4T3XJ+PyGUakLJPa31jjBEQRRuavG2tWCrRMFGGkdpv6brepT7mIf5ZEEUbOqLFdoggTUBbcfw6jxqOJIkxEmmv8Ese/u2m2RBEmpqw/dTn9TqIIE1TWp/qIsncQRZiocjldRfOWTw4kijBx5YOCzTMeSBRhBso84+cQxleJIsxEWrbjBswLRBFmRBhfJ4owM+WDhIXxGaIIMySMzxNFmClhfJoowoylMLorXYgizJww/kkUgXxXevZEEYiI/8JYzX07iCLwn/IdMLP+TEZRBP5QPpNxtt/+KIrAU6povhp3dkQReKTckf4yx+cuisCTyo2X2X0WoygCzyqfxTir+UVRBF5TxYwWdosi8KIyvzib9YuiCLyqfHL3LC6jF3Y3nPgkW1VnEZF/IiLOX/mf3UezJGb/c1dGbH2qIuIiIpaT3l8OWWj5pFpV59HE4yz92cb/b0TEOpqP+lrvNvW6y+e129T3i1V1ExHXU95/Hx4eHro6UC4i4ufQN8huU39wWvOO4/s8Iq4i4jK6G0ndRxPJdTSR3Hb0XP+N10e6oz0vjRThvSdPc1m8D+FZD7/Csjz2Zfl97iLiNiJ+nPhS+1uMYIDzXm60wBstVtXFYlV9j4hfEfE1+gniU84joo6IX4tVdV2i3bpy2T7Zmy6iCAcqMfwZzSjpcsC/6jKaWP9arKqfi1V1dYLHmOw7XUQRXrFYVWcphhcj+/UvIqJerKpfZV6/FWX+8naS+9shP90TOZrLuvP4PfGfJ8e38ftdCuuI2HY1UT+y7Xgdzahr7M4i4udiVa0j4qalO9c30cypToq7z38Z893nxaq6jGZk8N5lINto5oruymLd2SrHax3DmS9s2200cTzqhXCxquroIIxdnpei2OPGb2m77uePrqLdpSDbctJM8hLplW06ldHhIW7Kfn7X3epyRfJrSuelOcXxnrjLcvLu74C2vTbuLH7PRQ35pkKb2/SsrMGbSxCjPNd/3zvfOMW5RVF8fGIMfiK9/I77k/fUC4XPIuJ7CfCU9/tl2abnU36eL+zjn2UZz3uOp0l9p4soPjbYKJbR4fdopiG6nuv6ulhV/77zpBm0xar6GhHfY+Lv6T1kH0czanzTC0MZLa6nshFE8bHLIZ74ZSTzK/pdH3cezYhiMvEoNwomPQp+o7NowvjWbTKZS2hRfPqgGMxJUua5vsdwRjLnQ9o+R27bTu6cjtT+yuCgUWNZrTCJJV2i+LSrE70L4C0n7Fk5afseHT63fUYdxrIYWxBftr8yOPT4m8QyLktyXt/JVVefY1eWN+zXGY7hju/HMS74NkJ8l2/l+1peO35PsjzHOsVhuY/fnzxy18J22L/DZBm/323y9ztPxuLHblOP6mswBfEot7tNXb2yfU9yB18Uh+09d9nG9n7Zt/jc9YedHnEMCuLx7so+v39mG19F806gVvk8xWGbcuDe4ypGsByjnKyCeLzzaO5Of3nmyulHnCCKXXKjhWMNcglTVqYsLLtpz36x96N57zKCHPWaRVGkDUO/KVSHhdltW0bzTqenRt+iyOwN9q1xZenQHN+615X6iTCOemmOKNKGQY4UyxKROX24Q1/+CGNZpjXahdyiSBuWA51XFMTu/D1iHO0ltCjSlkFdoqavHKU7dXqn091Yn4Qo0pahzdsJYj++lvWgox0pWqdIWwZz+Zy+j5l+XEXzTrD7IR0XhzJSZKonJf0a7XyuKNKWIY0IZvH1CY6J0xBF2jKIb70rN1im+g18dEAUmRqjRI4iikyNKHIUUWQyyl1nl84cRRRpyxAm1X2sG0cTRdoyhMXbRokcTRSZEp+Gw9FEkSlx+czRRJFJGPqnfzMeoshUuHSmFaJIa8o3NvbFSJFWiCJTYaRIK0QRIBFFgEQUARJRpE3nM31sJkQUaVOfd4BH+5WaDIsoMhX3NgFtEEWmwuUzrRBFgEQUARJRBEhEESARRYBEFAESUQRIRBEgEUWARBQBElEESEQRIBFFgEQUARJRBEhEESARRYBEFAESUQRIRBEgEUWARBQBElEESEQRIBFFgEQUARJRBEhEESARRYBEFAESUQRIRBEgEUWARBQBElEESEQRIBFFgEQUARJRBEhEESARRYBEFAESUQRIRBEgEUWARBQBElEESEQRIBFFgEQUARJRBEgVNwIE+H/DfbHv8/b5FxPKJvz+LiNru41CiyCHudpt6PeRfcLep7549yFfVdTwdTHjE5TOHGHQQD/DDLuRQosghxh6VO7uQQ4kir7l/6dJ0JIwUOZgo8pqxXzrHblPfh9EiBxJFXjP6KE7seXBioshrphITI0UOIoq8ZLvb1NspPJHdpjavyEFEkZdM7ZLTJTSvEkVeMrVLTpfQvEoUeYmRIrMjijxnMvOJe0N/qyLDIIo8Z6oBcQnNi0SR50xqlJgYLfIiUeQ5RorMkijylCm83/k5ojjC47HLBxNFnjLZcJSbR1OdGnA8tqCzKLrz5yD0/BiDrkeKXqHHYeovYKJofz2r6ygaLToIPT8Gvb/+mfKT41225fMHJ8tUzuh0ur86jeJuU9+GS2gHoOfJ4W67fpHu4+7zjf08aHN50XLVMg63XT9g51Eso8XOnygHm0ssXLEMX9XHetle1inuNnUVwjhIM5pvM1IctpsygOpcb4u3Sxg/h29aG5LZhGLC79gZu9uI+LTb1N/6+gUWPR+Y64hYL1bVMiIuIuI8IpYRcZb+s7O//p3Tmdsl5bocd3R/nO2Ptfvyz3cRsR7CyocPDw8PdhFA4b3PAIkoAiT/Bw83tUxVXmHAAAAAAElFTkSuQmCC"/>
+  <rect x="86" y="270" width="122" height="54" rx="10" fill="#EEF2FF" stroke="#C7D2FE"/>
+  <rect x="98" y="284" width="98" height="26" rx="4" fill="#FFFFFF" stroke="#A5B4FC"/>
+  <line x1="120" y1="324" x2="174" y2="324" stroke="#64748B" stroke-width="5" stroke-linecap="round"/>
+  <text x="147" y="403" text-anchor="middle" class="label">HammerDB VM</text>
+  <text x="147" y="429" text-anchor="middle" class="small">TPROC-C driver</text>
+
+  <line x1="252" y1="260" x2="365" y2="260" stroke="#0078D4" stroke-width="4" marker-end="url(#arrow)"/>
+  <text x="307" y="238" text-anchor="middle" class="arrow-label">workload</text>
+
+  <rect x="380" y="150" width="210" height="220" class="card"/>
+  <ellipse cx="485" cy="194" rx="64" ry="26" fill="#83C5F7" stroke="#0078D4" stroke-width="3"/>
+  <path d="M421 194 V281 C421 295 450 306 485 306 C520 306 549 295 549 281 V194" fill="url(#azureBlue)" stroke="#0078D4" stroke-width="3"/>
+  <ellipse cx="485" cy="281" rx="64" ry="26" fill="#59B4D9" stroke="#0078D4" stroke-width="3"/>
+  <path d="M450 222 h70 M450 248 h70 M450 274 h70" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" opacity="0.85"/>
+  <text x="485" y="403" text-anchor="middle" class="label">Azure SQL Database</text>
+  <text x="485" y="429" text-anchor="middle" class="small">TPROC-C tables</text>
+
+  <line x1="600" y1="260" x2="711" y2="260" stroke="#0078D4" stroke-width="4" marker-end="url(#arrow)"/>
+  <text x="655" y="238" text-anchor="middle" class="arrow-label">mirror</text>
+
+  <rect x="724" y="122" width="492" height="300" rx="26" fill="#ECFDF5" stroke="#86EFAC" stroke-width="2"/>
+  <text x="754" y="162" class="panel-title">Microsoft Fabric</text>
+  <g transform="translate(895 138)">
+    <rect x="0" y="0" width="28" height="28" rx="7" fill="#8DE971" transform="rotate(45 14 14)"/>
+    <rect x="33" y="0" width="28" height="28" rx="7" fill="#6CE5E8" transform="rotate(45 47 14)"/>
+    <rect x="16" y="30" width="28" height="28" rx="7" fill="#F9D65C" transform="rotate(45 30 44)"/>
+    <rect x="49" y="30" width="28" height="28" rx="7" fill="#B99CFF" transform="rotate(45 63 44)"/>
+  </g>
+
+  <rect x="760" y="200" width="190" height="160" rx="20" fill="#FFFFFF" stroke="#BBF7D0" filter="url(#shadow)"/>
+  <ellipse cx="855" cy="236" rx="48" ry="20" fill="#BBF7D0" stroke="#16A34A" stroke-width="3"/>
+  <path d="M807 236 V293 C807 304 828 313 855 313 C882 313 903 304 903 293 V236" fill="url(#fabricGreen)" stroke="#16A34A" stroke-width="3"/>
+  <ellipse cx="855" cy="293" rx="48" ry="20" fill="#63D471" stroke="#16A34A" stroke-width="3"/>
+  <text x="855" y="386" text-anchor="middle" class="panel-title">Mirrored database</text>
+  <text x="855" y="410" text-anchor="middle" class="tiny">continuous replication</text>
+
+  <line x1="958" y1="280" x2="1028" y2="280" stroke="#0078D4" stroke-width="4" marker-end="url(#arrow)"/>
+
+  <rect x="1040" y="200" width="140" height="160" rx="20" fill="#FFFFFF" stroke="#BAE6FD" filter="url(#shadow)"/>
+  <rect x="1071" y="226" width="78" height="58" rx="7" fill="url(#fabricCyan)" stroke="#0284C7" stroke-width="3"/>
+  <rect x="1085" y="239" width="50" height="8" rx="4" fill="#FFFFFF" opacity="0.9"/>
+  <rect x="1085" y="256" width="38" height="8" rx="4" fill="#FFFFFF" opacity="0.9"/>
+  <line x1="1110" y1="284" x2="1110" y2="310" stroke="#0284C7" stroke-width="5"/>
+  <line x1="1088" y1="310" x2="1132" y2="310" stroke="#0284C7" stroke-width="5" stroke-linecap="round"/>
+  <text x="1110" y="386" text-anchor="middle" class="panel-title">SQL endpoint</text>
+  <text x="1110" y="410" text-anchor="middle" class="tiny">query target</text>
+
+  <line x1="1110" y1="365" x2="1110" y2="446" stroke="#0078D4" stroke-width="4" marker-end="url(#arrow)"/>
+
+  <rect x="902" y="448" width="416" height="52" rx="18" fill="#F8FAFC" stroke="#CBD5E1"/>
+  <g transform="translate(934 462)">
+    <rect x="0" y="0" width="26" height="26" rx="5" fill="#FFFFFF" stroke="#64748B" stroke-width="2"/>
+    <path d="M6 14 l5 5 l10 -12" fill="none" stroke="#16A34A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="984" y="481" class="panel-title">Row-count and CDC visibility checks</text>
+
+  <path d="M184 456 C324 492 500 492 638 456" fill="none" stroke="#CBD5E1" stroke-width="2" stroke-dasharray="7 8"/>
+  <text x="410" y="488" text-anchor="middle" class="tiny">Benchmark scripts record source timestamps and first observed Fabric SQL endpoint visibility.</text>
+</svg>

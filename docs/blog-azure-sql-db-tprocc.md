@@ -16,6 +16,8 @@ The benchmark uses HammerDB **TPROC-C** because Fabric Mirroring sources are usu
 
 Architecture:
 
+![HammerDB to Azure SQL Database to Microsoft Fabric Mirroring benchmark flow](media/azure-sql-fabric-mirroring-flow.svg)
+
 ```text
 HammerDB VM
   -> Azure SQL Database
