@@ -28,6 +28,7 @@ set msi_object_id [expr {[info exists ::env(AZURE_SQL_MSI_OBJECT_ID)] ? $::env(A
 set sql_db [expr {[info exists ::env(AZURE_SQL_TPROC_C_DATABASE)] ? $::env(AZURE_SQL_TPROC_C_DATABASE) : "tprocc"}]
 set warehouses [expr {[info exists ::env(TPROC_C_WAREHOUSES)] ? $::env(TPROC_C_WAREHOUSES) : "10"}]
 set build_vus [expr {[info exists ::env(TPROC_C_BUILD_VUSERS)] ? $::env(TPROC_C_BUILD_VUSERS) : "4"}]
+set use_bcp [expr {[info exists ::env(AZURE_SQL_TPROC_C_USE_BCP)] ? $::env(AZURE_SQL_TPROC_C_USE_BCP) : ($sql_auth eq "entra" ? "false" : "true")}]
 
 dbset db mssqls
 dbset bm TPROC-C
@@ -46,6 +47,7 @@ diset connection mssqls_trust_server_cert false
 diset tpcc mssqls_count_ware $warehouses
 diset tpcc mssqls_num_vu $build_vus
 diset tpcc mssqls_dbase $sql_db
+diset tpcc mssqls_use_bcp $use_bcp
 
 print dict
 buildschema

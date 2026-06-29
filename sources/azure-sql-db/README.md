@@ -82,9 +82,11 @@ For Entra-only tenants, grant the benchmark VM managed identity access to Azure 
 ```bash
 export AZURE_SQL_AUTH_MODE=entra
 export AZURE_SQL_MSI_OBJECT_ID="<benchmark-vm-managed-identity-object-id>"
+export AZURE_SQL_TPROC_C_USE_BCP=false
 ```
 
 HammerDB uses `mssqls_linux_authent=entra` plus `mssqls_msi_object_id=<guid>`, which maps to the ODBC `ActiveDirectoryMsi` authentication mode on Linux.
+For Entra-only builds, keep `AZURE_SQL_TPROC_C_USE_BCP=false` because HammerDB's SQL Server BCP load path does not use the VM managed identity in the same way as the ODBC connection path.
 
 In the validated benchmark tenant, group-based SQL admin membership did not allow the managed identity to log in to Azure SQL, and a contained database user created from the managed identity SID did not authenticate after the server admin was restored. The working path was to set the VM system-assigned managed identity as the Azure SQL Microsoft Entra admin:
 
