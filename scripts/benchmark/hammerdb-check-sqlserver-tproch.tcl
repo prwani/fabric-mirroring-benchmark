@@ -1,4 +1,4 @@
-# HammerDB CLI script for SQL Server/Azure SQL Database TPROC-H query workload.
+# HammerDB CLI script for SQL Server/Azure SQL Database TPROC-H schema validation.
 
 set sql_host $::env(AZURE_SQL_HOST)
 set sql_port [expr {[info exists ::env(AZURE_SQL_PORT)] ? $::env(AZURE_SQL_PORT) : "1433"}]
@@ -7,11 +7,6 @@ set sql_pass [expr {[info exists ::env(AZURE_SQL_HAMMERDB_PASSWORD)] && $::env(A
 set sql_auth [expr {[info exists ::env(AZURE_SQL_AUTH_MODE)] ? [string tolower $::env(AZURE_SQL_AUTH_MODE)] : "sql"}]
 set msi_object_id [expr {[info exists ::env(AZURE_SQL_MSI_OBJECT_ID)] ? $::env(AZURE_SQL_MSI_OBJECT_ID) : "null"}]
 set sql_db $::env(AZURE_SQL_DATABASE)
-set vus [expr {[info exists ::env(TPROC_H_VUSERS)] ? $::env(TPROC_H_VUSERS) : "4"}]
-set sf [expr {[info exists ::env(TPROC_H_SCALE_FACTOR)] ? $::env(TPROC_H_SCALE_FACTOR) : "1"}]
-set querysets [expr {[info exists ::env(TPROC_H_TOTAL_QUERYSETS)] ? $::env(TPROC_H_TOTAL_QUERYSETS) : "1"}]
-set threads [expr {[info exists ::env(TPROC_H_BUILD_THREADS)] ? $::env(TPROC_H_BUILD_THREADS) : "4"}]
-set columnstore [expr {[info exists ::env(TPROC_H_USE_COLUMNSTORE)] ? $::env(TPROC_H_USE_COLUMNSTORE) : "false"}]
 
 dbset db mssqls
 dbset bm TPROC-H
@@ -28,13 +23,6 @@ diset connection mssqls_pass $sql_pass
 diset connection mssqls_encrypt_connection true
 diset connection mssqls_trust_server_cert false
 diset tpch mssqls_tpch_dbase $sql_db
-diset tpch mssqls_total_querysets $querysets
-diset tpch mssqls_scale_fact $sf
-diset tpch mssqls_num_tpch_threads $threads
-diset tpch mssqls_colstore $columnstore
 
-loadscript
-vuset vu $vus
-vucreate
-vurun
-vudestroy
+print dict
+checkschema

@@ -75,7 +75,32 @@ sqlcmd -C -S "$AZURE_SQL_HOST" -d "$AZURE_SQL_DATABASE" \
 
 ## HammerDB workload
 
-Use the SQL Server TPROC-H HammerDB scripts. They are source-specific workload scripts, while VM/Fabric deployment remains shared. The current scripted HammerDB path expects SQL authentication; for Entra-only tenants, validate HammerDB's SQL Server Entra/MSI connection mode before using it for the live benchmark.
+Use the SQL Server TPROC-H HammerDB scripts. They are source-specific workload scripts, while VM/Fabric deployment remains shared.
+
+For Entra-only tenants, grant the benchmark VM managed identity access to Azure SQL and use HammerDB's SQL Server Entra/MSI mode:
+
+```bash
+export AZURE_SQL_AUTH_MODE=entra
+export AZURE_SQL_MSI_OBJECT_ID="<benchmark-vm-managed-identity-object-id>"
+```
+
+HammerDB uses `mssqls_linux_authent=entra` plus `mssqls_msi_object_id=<guid>`, which maps to the ODBC `ActiveDirectoryMsi` authentication mode on Linux.
+
+In the validated benchmark tenant, group-based SQL admin membership did not allow the managed identity to log in to Azure SQL, and a contained database user created from the managed identity SID did not authenticate after the server admin was restored. The working path was to set the VM system-assigned managed identity as the Azure SQL Microsoft Entra admin:
+
+```bash
+export AZURE_SQL_SERVER_NAME=sql-fsqlmb-53vwnrvnudnko
+export BENCHMARK_VM_NAME=vm-fsqlmb-53vwnrvnudnko
+scripts/provision/setup-azure-sql-vm-mi-admin.sh
+```
+
+This is acceptable for an isolated benchmark server. For shared or production SQL servers, use a dedicated Entra admin group or a least-privilege contained user once that path is validated in your tenant.
+
+Validate connectivity/schema state with:
+
+```bash
+"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-check-sqlserver-tproch.tcl
+```
 
 ```bash
 export AZURE_SQL_SQLCMD_ARGS="-C -S $AZURE_SQL_HOST -d $AZURE_SQL_DATABASE -U $AZURE_SQL_ADMIN_USER -P '$AZURE_SQL_ADMIN_PASSWORD'"

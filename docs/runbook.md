@@ -52,6 +52,21 @@ scripts/provision/deploy-azure.sh
 
 Azure SQL Database defaults to Microsoft Entra-only authentication because many enterprise tenants deny SQL authentication on Azure SQL. Set `SQL_ENTRA_ADMIN_LOGIN` and `SQL_ENTRA_ADMIN_OBJECT_ID`. Only set `AZURE_SQL_AAD_ONLY_AUTH=false` when your tenant policy explicitly allows SQL authentication.
 
+For Entra-only HammerDB runs from the benchmark VM, set the VM managed identity as the Azure SQL Microsoft Entra admin for the isolated benchmark server:
+
+```bash
+export AZURE_SQL_SERVER_NAME="<deployment-output azureSqlServerName>"
+export BENCHMARK_VM_NAME="<deployment-output benchmarkVmName>"
+scripts/provision/setup-azure-sql-vm-mi-admin.sh
+```
+
+Then set:
+
+```bash
+export AZURE_SQL_AUTH_MODE=entra
+export AZURE_SQL_MSI_OBJECT_ID="<benchmark VM principalId>"
+```
+
 Record deployment outputs in `.env`, especially:
 
 - `POSTGRES_HOST`
@@ -224,6 +239,8 @@ Run optional source load:
 For Azure SQL Database:
 
 ```bash
+export AZURE_SQL_AUTH_MODE=entra
+export AZURE_SQL_MSI_OBJECT_ID="<benchmark-vm-managed-identity-object-id>"
 "${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-run-sqlserver-tproch.tcl
 ```
 

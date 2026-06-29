@@ -5,6 +5,8 @@ set sql_host $::env(AZURE_SQL_HOST)
 set sql_port [expr {[info exists ::env(AZURE_SQL_PORT)] ? $::env(AZURE_SQL_PORT) : "1433"}]
 set sql_user [expr {[info exists ::env(AZURE_SQL_HAMMERDB_LOGIN)] ? $::env(AZURE_SQL_HAMMERDB_LOGIN) : $::env(AZURE_SQL_ADMIN_USER)}]
 set sql_pass [expr {[info exists ::env(AZURE_SQL_HAMMERDB_PASSWORD)] && $::env(AZURE_SQL_HAMMERDB_PASSWORD) ne "" ? $::env(AZURE_SQL_HAMMERDB_PASSWORD) : $::env(AZURE_SQL_ADMIN_PASSWORD)}]
+set sql_auth [expr {[info exists ::env(AZURE_SQL_AUTH_MODE)] ? [string tolower $::env(AZURE_SQL_AUTH_MODE)] : "sql"}]
+set msi_object_id [expr {[info exists ::env(AZURE_SQL_MSI_OBJECT_ID)] ? $::env(AZURE_SQL_MSI_OBJECT_ID) : "null"}]
 set sql_db $::env(AZURE_SQL_DATABASE)
 set sf [expr {[info exists ::env(TPROC_H_SCALE_FACTOR)] ? $::env(TPROC_H_SCALE_FACTOR) : "1"}]
 set threads [expr {[info exists ::env(TPROC_H_BUILD_THREADS)] ? $::env(TPROC_H_BUILD_THREADS) : "4"}]
@@ -18,8 +20,9 @@ diset connection mssqls_linux_server $sql_host
 diset connection mssqls_port $sql_port
 diset connection mssqls_tcp true
 diset connection mssqls_azure true
-diset connection mssqls_authentication sql
-diset connection mssqls_linux_authent sql
+diset connection mssqls_authentication $sql_auth
+diset connection mssqls_linux_authent $sql_auth
+diset connection mssqls_msi_object_id $msi_object_id
 diset connection mssqls_uid $sql_user
 diset connection mssqls_pass $sql_pass
 diset connection mssqls_encrypt_connection true
