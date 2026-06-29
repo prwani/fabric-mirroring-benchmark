@@ -9,6 +9,14 @@ if {![info exists ::env(TMP)] || $::env(TMP) eq ""} {
 if {![info exists ::env(TEMP)] || $::env(TEMP) eq ""} {
     set ::env(TEMP) $::env(TMPDIR)
 }
+if {![info exists ::env(PATH)] || $::env(PATH) eq ""} {
+    set ::env(PATH) "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+}
+foreach dir {/opt/mssql-tools18/bin /opt/mssql-tools/bin} {
+    if {[file isdirectory $dir] && [string first ":$dir:" ":$::env(PATH):"] < 0} {
+        set ::env(PATH) "$dir:$::env(PATH)"
+    }
+}
 
 set sql_host $::env(AZURE_SQL_HOST)
 set sql_port [expr {[info exists ::env(AZURE_SQL_PORT)] ? $::env(AZURE_SQL_PORT) : "1433"}]

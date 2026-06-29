@@ -8,7 +8,7 @@ INSTALL_DIR="${HAMMERDB_INSTALL_DIR:-$HOME/hammerdb}"
 sudo apt-get update
 sudo apt-get install -y curl jq unzip python3 python3-venv python3-pip postgresql-client tcl ca-certificates gnupg apt-transport-https
 
-if ! command -v sqlcmd >/dev/null 2>&1; then
+if ! command -v sqlcmd >/dev/null 2>&1 || ! command -v bcp >/dev/null 2>&1; then
   . /etc/os-release
   curl -fsSL "https://packages.microsoft.com/config/ubuntu/${VERSION_ID}/packages-microsoft-prod.deb" -o /tmp/packages-microsoft-prod.deb
   sudo dpkg -i /tmp/packages-microsoft-prod.deb
@@ -16,6 +16,8 @@ if ! command -v sqlcmd >/dev/null 2>&1; then
   sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18 mssql-tools18 unixodbc-dev
   echo 'export PATH="$PATH:/opt/mssql-tools18/bin"' >> "$HOME/.profile"
 fi
+
+export PATH="$PATH:/opt/mssql-tools18/bin:/opt/mssql-tools/bin"
 
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
