@@ -75,6 +75,8 @@ sqlcmd -C -S "$AZURE_SQL_HOST" -d "$AZURE_SQL_DATABASE" \
 
 ## HammerDB workload
 
+Prefer **TPROC-C** for Azure SQL mirroring latency tests because Azure SQL Database is most commonly mirrored from an OLTP application source. Keep TPROC-H as an optional analytical initial-load/reference dataset.
+
 Use the SQL Server TPROC-H HammerDB scripts. They are source-specific workload scripts, while VM/Fabric deployment remains shared.
 
 For Entra-only tenants, grant the benchmark VM managed identity access to Azure SQL and use HammerDB's SQL Server Entra/MSI mode:
@@ -96,7 +98,21 @@ scripts/provision/setup-azure-sql-vm-mi-admin.sh
 
 This is acceptable for an isolated benchmark server. For shared or production SQL servers, use a dedicated Entra admin group or a least-privilege contained user once that path is validated in your tenant.
 
-Validate connectivity/schema state with:
+For the transactional workload, create/use a separate Azure SQL database and run:
+
+```bash
+export AZURE_SQL_TPROC_C_DATABASE=tprocc
+"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-build-sqlserver-tprocc.tcl
+"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-check-sqlserver-tprocc.tcl
+```
+
+After Fabric mirroring is configured for the `tprocc` database, run:
+
+```bash
+"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-run-sqlserver-tprocc.tcl
+```
+
+For TPROC-H connectivity/schema state, use:
 
 ```bash
 "${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-check-sqlserver-tproch.tcl

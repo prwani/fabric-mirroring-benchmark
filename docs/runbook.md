@@ -150,6 +150,14 @@ Set `HAMMERDB_CLI` if `hammerdbcli` is not on `PATH`.
 "${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-build-tproch.tcl
 ```
 
+For Azure SQL Database transactional mirroring tests, prefer TPROC-C instead of TPROC-H:
+
+```bash
+export AZURE_SQL_TPROC_C_DATABASE=tprocc
+"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-build-sqlserver-tprocc.tcl
+"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-check-sqlserver-tprocc.tcl
+```
+
 After load, rerun the source validation. Fabric mirroring requires source-specific prerequisites; for relational benchmark tables, primary keys are required for the current PostgreSQL marker/table parity workflow.
 
 Create the CDC marker table after the HammerDB schema build. HammerDB requires an empty target database, so do not create the marker table before the TPROC-H build:
