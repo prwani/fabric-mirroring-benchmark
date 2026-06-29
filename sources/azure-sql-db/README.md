@@ -103,8 +103,9 @@ For the transactional workload, create/use a separate Azure SQL database and run
 ```bash
 export AZURE_SQL_TPROC_C_DATABASE=tprocc
 "${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-build-sqlserver-tprocc.tcl
-"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-check-sqlserver-tprocc.tcl
 ```
+
+For Entra-only deployments that use VM managed identity, validate readiness with row counts through the same MSI connection path. HammerDB `checkschema` may attempt to connect to `tempdb`, which can fail even when the `tprocc` schema is valid and queryable.
 
 After the HammerDB build and before Fabric mirroring, add benchmark-owned columns to `dbo.stock` so they are present in the first replication attempt:
 
@@ -157,7 +158,7 @@ sqlcmd $AZURE_SQL_SQLCMD_ARGS \
 
 ## Live validation notes
 
-The Sweden Central Azure SQL source uses HammerDB TPROC-C with VM managed identity authentication:
+The Sweden Central Azure SQL source uses HammerDB TPROC-C with VM managed identity authentication on `GP_Gen5_4`:
 
 | Table | Source rows |
 |---|---:|
@@ -167,10 +168,12 @@ The Sweden Central Azure SQL source uses HammerDB TPROC-C with VM managed identi
 | `dbo.stock` | 1,000,000 |
 | `dbo.customer` | 300,000 |
 | `dbo.orders` | 300,000 |
-| `dbo.order_line` | approximately 3,000,000 |
+| `dbo.order_line` | 3,000,481 |
 | `dbo.new_order` | 90,000 |
 | `dbo.history` | 300,000 |
 | `dbo.fabric_cdc_latency_marker` | 0 |
+
+`dbo.stock` also includes the pre-mirroring benchmark columns `mirror_benchmark_update_batch`, `mirror_benchmark_update_ts`, and `mirror_benchmark_payload`.
 
 Create the Fabric mirrored Azure SQL Database item in workspace `fsqlmb-benchmark`, connect to `sql-fsqlmb-53vwnrvnudnko.database.windows.net` / `tprocc`, and select the tables above. Use Organization Account, service principal, or workspace identity because SQL Basic authentication is blocked when the Azure SQL server is Entra-only.
 

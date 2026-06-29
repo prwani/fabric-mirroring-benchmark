@@ -164,8 +164,9 @@ For Azure SQL Database:
 ```bash
 export AZURE_SQL_TPROC_C_DATABASE=tprocc
 "${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-build-sqlserver-tprocc.tcl
-"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-check-sqlserver-tprocc.tcl
 ```
+
+In Entra-only deployments that use VM managed identity, validate the Azure SQL build with row counts through the same MSI connection path. HammerDB `checkschema` may try to connect to `tempdb`, which is not a reliable readiness check for Azure SQL Database with this authentication mode.
 
 After load, rerun the source validation. Fabric mirroring requires source-specific prerequisites; for relational benchmark tables, primary keys are required for the current PostgreSQL marker/table parity workflow.
 
@@ -225,6 +226,7 @@ For the live Azure SQL validation environment:
 | Workspace ID | `ab29dc78-79f1-48ff-bcdd-7df991904572` |
 | Azure SQL server | `sql-fsqlmb-53vwnrvnudnko.database.windows.net` |
 | Azure SQL database | `tprocc` |
+| Azure SQL SKU | `GP_Gen5_4` |
 | Tables | `dbo.warehouse`, `dbo.district`, `dbo.customer`, `dbo.history`, `dbo.orders`, `dbo.new_order`, `dbo.order_line`, `dbo.stock`, `dbo.item`, `dbo.fabric_cdc_latency_marker` |
 
 The REST API has two relevant operation groups:
