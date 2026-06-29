@@ -161,6 +161,16 @@ sqlcmd $AZURE_SQL_SQLCMD_ARGS \
   -i scripts/provision/setup-tprocc-schema-evolution-azure-sql.sql
 ```
 
+If the mirrored database item is configured to add new tables automatically, test that path with:
+
+```bash
+python3 scripts/benchmark/run-new-table-auto-replication-test.py \
+  --source-type azure-sql-db \
+  --source-sqlcmd-args "$AZURE_SQL_SQLCMD_ARGS" \
+  --fabric-sqlcmd-args "$FABRIC_SQLCMD_ARGS" \
+  --rows 1000
+```
+
 ## Fabric mirroring tutorial
 
 <https://learn.microsoft.com/fabric/mirroring/azure-sql-database-tutorial>

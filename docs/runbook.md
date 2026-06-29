@@ -385,6 +385,16 @@ python3 scripts/benchmark/check-fabric-table-schema.py \
   --columns mirror_schema_evolution_note
 ```
 
+If mirroring was configured with **add any new tables to replication**, create a new source table after mirroring starts and measure how long it takes Fabric to auto-add and replicate it:
+
+```bash
+python3 scripts/benchmark/run-new-table-auto-replication-test.py \
+  --source-type azure-sql-db \
+  --source-sqlcmd-args "$AZURE_SQL_SQLCMD_ARGS" \
+  --fabric-sqlcmd-args "$FABRIC_SQLCMD_ARGS" \
+  --rows 1000
+```
+
 If interactive `sqlcmd -G` is not practical, use ODBC token authentication instead:
 
 ```bash
