@@ -19,6 +19,32 @@ Use the PostgreSQL HammerDB TPROC-C scripts:
 
 Default initial load size is `TPROC_C_WAREHOUSES=10`. This creates transactional OLTP-shaped tables and supports a sustained write workload for CDC latency measurements.
 
+After the HammerDB build and before Fabric mirroring, add benchmark-owned columns to `public.stock`:
+
+```bash
+psql "$POSTGRES_PSQL_CONN" \
+  -v ON_ERROR_STOP=1 \
+  -f scripts/provision/setup-tprocc-benchmark-columns-postgres.sql
+```
+
+Use those pre-mirrored columns for the large update scenario:
+
+```bash
+python3 scripts/benchmark/run-stock-bulk-update.py \
+  --pg-conn "$POSTGRES_PSQL_CONN" \
+  --batch-size 100000 \
+  --fabric-sqlcmd-args "$FABRIC_SQLCMD_ARGS" \
+  --fabric-stock-table "_public.stock"
+```
+
+For post-mirroring schema evolution, use the smaller `public.warehouse` table:
+
+```bash
+psql "$POSTGRES_PSQL_CONN" \
+  -v ON_ERROR_STOP=1 \
+  -f scripts/provision/setup-tprocc-schema-evolution-postgres.sql
+```
+
 ## Fabric mirroring tutorial
 
 <https://learn.microsoft.com/fabric/mirroring/azure-database-postgresql-tutorial>

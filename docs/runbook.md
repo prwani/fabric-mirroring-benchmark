@@ -169,6 +169,21 @@ export AZURE_SQL_TPROC_C_DATABASE=tprocc
 
 After load, rerun the source validation. Fabric mirroring requires source-specific prerequisites; for relational benchmark tables, primary keys are required for the current PostgreSQL marker/table parity workflow.
 
+Create benchmark-owned columns on `stock` after the HammerDB schema build and before Fabric mirroring. These columns are intentionally present during the first replication attempt so the large-update scenario does not depend on post-mirroring schema changes:
+
+```bash
+psql "host=$POSTGRES_HOST port=5432 dbname=$POSTGRES_DATABASE user=$POSTGRES_ADMIN_USER sslmode=require" \
+  -v ON_ERROR_STOP=1 \
+  -f scripts/provision/setup-tprocc-benchmark-columns-postgres.sql
+```
+
+For Azure SQL Database:
+
+```bash
+sqlcmd $AZURE_SQL_SQLCMD_ARGS \
+  -i scripts/provision/setup-tprocc-benchmark-columns-azure-sql.sql
+```
+
 Create the CDC marker table after the HammerDB schema build. HammerDB requires an empty target database, so do not create the marker table before the TPROC-C build:
 
 ```bash
@@ -197,9 +212,9 @@ Create the mirrored database item for the selected source through one of these s
 - Fabric Mirroring REST API: <https://learn.microsoft.com/fabric/mirroring/mirrored-database-rest-api>
 - fabric-cli item commands: <https://microsoft.github.io/fabric-cli/examples/item_examples/#startstop-mirrored-databases>
 
-Select the TPROC-C tables and `public.fabric_cdc_latency_marker`.
+Select the TPROC-C tables and `public.fabric_cdc_latency_marker`. Confirm that `stock` includes `mirror_benchmark_update_batch`, `mirror_benchmark_update_ts`, and `mirror_benchmark_payload` before starting mirroring.
 
-For Azure SQL Database, create a mirrored Azure SQL Database item and either mirror all data or select the `dbo` TPROC-C tables plus `dbo.fabric_cdc_latency_marker`. The source connection can use Basic authentication with the prepared Fabric SQL login, or another supported Fabric authentication method.
+For Azure SQL Database, create a mirrored Azure SQL Database item and either mirror all data or select the `dbo` TPROC-C tables plus `dbo.fabric_cdc_latency_marker`. Confirm that `dbo.stock` includes `mirror_benchmark_update_batch`, `mirror_benchmark_update_ts`, and `mirror_benchmark_payload` before starting mirroring. The source connection can use Basic authentication with the prepared Fabric SQL login, or another supported Fabric authentication method.
 In Entra-only deployments, use Organization Account, service principal, or workspace identity instead of Basic authentication.
 
 For the live Azure SQL validation environment:
@@ -311,6 +326,52 @@ python3 scripts/benchmark/run-cdc-bulk-test.py \
   --batches 3 \
   --fabric-sqlcmd-args "$FABRIC_SQLCMD_ARGS" \
   --fabric-marker-table "$FABRIC_MARKER_TABLE"
+```
+
+For the large transactional update scenario, update the TPROC-C `stock` table instead of a separate analytical table. At the default 10 warehouses, `stock` contains 1,000,000 rows. Start with 100,000 rows, then increase to 500,000 or 1,000,000 after the smaller run completes:
+
+```bash
+python3 scripts/benchmark/run-stock-bulk-update.py \
+  --pg-conn "$POSTGRES_PSQL_CONN" \
+  --batch-size 100000 \
+  --fabric-sqlcmd-args "$FABRIC_SQLCMD_ARGS" \
+  --fabric-stock-table "_public.stock"
+```
+
+For Azure SQL Database:
+
+```bash
+python3 scripts/benchmark/run-stock-bulk-update.py \
+  --source-type azure-sql-db \
+  --source-sqlcmd-args "$AZURE_SQL_SQLCMD_ARGS" \
+  --batch-size 100000 \
+  --fabric-sqlcmd-args "$FABRIC_SQLCMD_ARGS" \
+  --fabric-stock-table "dbo.stock"
+```
+
+To test post-mirroring schema evolution, add a benchmark column to a small TPROC-C table rather than `stock`. TPROC-C does not have a `region` table, so use `warehouse`:
+
+```bash
+psql "host=$POSTGRES_HOST port=5432 dbname=$POSTGRES_DATABASE user=$POSTGRES_ADMIN_USER sslmode=require" \
+  -v ON_ERROR_STOP=1 \
+  -f scripts/provision/setup-tprocc-schema-evolution-postgres.sql
+
+python3 scripts/benchmark/check-fabric-table-schema.py \
+  --schema _public \
+  --table warehouse \
+  --columns mirror_schema_evolution_note
+```
+
+For Azure SQL Database:
+
+```bash
+sqlcmd $AZURE_SQL_SQLCMD_ARGS \
+  -i scripts/provision/setup-tprocc-schema-evolution-azure-sql.sql
+
+python3 scripts/benchmark/check-fabric-table-schema.py \
+  --schema dbo \
+  --table warehouse \
+  --columns mirror_schema_evolution_note
 ```
 
 If interactive `sqlcmd -G` is not practical, use ODBC token authentication instead:

@@ -104,6 +104,13 @@ export AZURE_SQL_TPROC_C_DATABASE=tprocc
 "${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-check-sqlserver-tprocc.tcl
 ```
 
+After the HammerDB build and before Fabric mirroring, add benchmark-owned columns to `dbo.stock` so they are present in the first replication attempt:
+
+```bash
+sqlcmd $AZURE_SQL_SQLCMD_ARGS \
+  -i scripts/provision/setup-tprocc-benchmark-columns-azure-sql.sql
+```
+
 After Fabric mirroring is configured for the `tprocc` database, run:
 
 ```bash
@@ -126,6 +133,20 @@ python3 scripts/benchmark/run-cdc-latency-test.py \
   --source-sqlcmd-args "$AZURE_SQL_SQLCMD_ARGS" \
   --fabric-sqlcmd-args "$FABRIC_SQLCMD_ARGS" \
   --fabric-marker-table dbo.fabric_cdc_latency_marker
+
+python3 scripts/benchmark/run-stock-bulk-update.py \
+  --source-type azure-sql-db \
+  --source-sqlcmd-args "$AZURE_SQL_SQLCMD_ARGS" \
+  --batch-size 100000 \
+  --fabric-sqlcmd-args "$FABRIC_SQLCMD_ARGS" \
+  --fabric-stock-table dbo.stock
+```
+
+For post-mirroring schema evolution, add a benchmark column to the smaller `dbo.warehouse` table instead of `dbo.stock`:
+
+```bash
+sqlcmd $AZURE_SQL_SQLCMD_ARGS \
+  -i scripts/provision/setup-tprocc-schema-evolution-azure-sql.sql
 ```
 
 ## Fabric mirroring tutorial
