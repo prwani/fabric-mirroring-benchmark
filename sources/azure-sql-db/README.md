@@ -143,6 +143,24 @@ python3 scripts/benchmark/run-cdc-latency-test.py \
 
 <https://learn.microsoft.com/fabric/mirroring/azure-sql-database-tutorial>
 
+## Live validation notes
+
+The Sweden Central Azure SQL source was prepared with HammerDB TPROC-H scale factor 1 using VM managed identity authentication:
+
+| Table | Source rows |
+|---|---:|
+| `dbo.region` | 5 |
+| `dbo.nation` | 25 |
+| `dbo.supplier` | 10,000 |
+| `dbo.customer` | 150,000 |
+| `dbo.part` | 200,000 |
+| `dbo.partsupp` | 800,000 |
+| `dbo.orders` | 1,500,000 |
+| `dbo.lineitem` | 6,002,677 |
+| `dbo.fabric_cdc_latency_marker` | 0 |
+
+Create the Fabric mirrored Azure SQL Database item in workspace `fsqlmb-benchmark`, connect to `sql-fsqlmb-53vwnrvnudnko.database.windows.net` / `tpch`, and select the tables above. Use Organization Account, service principal, or workspace identity because SQL Basic authentication is blocked when the Azure SQL server is Entra-only.
+
 ## Notes
 
 Fabric mirroring for Azure SQL Database requires a supported database tier. This adapter uses vCore General Purpose rather than low-DTU Basic/S0 tiers.

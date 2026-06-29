@@ -186,6 +186,16 @@ Select the TPROC-H tables and `public.fabric_cdc_latency_marker`.
 For Azure SQL Database, create a mirrored Azure SQL Database item and either mirror all data or select the `dbo` TPROC-H tables plus `dbo.fabric_cdc_latency_marker`. The source connection can use Basic authentication with the prepared Fabric SQL login, or another supported Fabric authentication method.
 In Entra-only deployments, use Organization Account, service principal, or workspace identity instead of Basic authentication.
 
+For the live Azure SQL validation environment:
+
+| Setting | Value |
+|---|---|
+| Fabric workspace | `fsqlmb-benchmark` |
+| Workspace ID | `ab29dc78-79f1-48ff-bcdd-7df991904572` |
+| Azure SQL server | `sql-fsqlmb-53vwnrvnudnko.database.windows.net` |
+| Azure SQL database | `tpch` |
+| Tables | `dbo.region`, `dbo.nation`, `dbo.supplier`, `dbo.customer`, `dbo.part`, `dbo.partsupp`, `dbo.orders`, `dbo.lineitem`, `dbo.fabric_cdc_latency_marker` |
+
 The REST API has two relevant operation groups:
 
 - Mirrored database item CRUD operations.
