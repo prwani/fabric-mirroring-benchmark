@@ -103,6 +103,31 @@ param sqlEntraAdminObjectId string = ''
 @description('Azure SQL Database name. Used when sourceType=azure-sql-db.')
 param azureSqlDatabaseName string = 'tpch'
 
+@description('Azure SQL logical server SQL authentication administrator login. Used when sourceType=azure-sql-db.')
+param azureSqlAdminUser string = 'sqladmin'
+
+@secure()
+@description('Azure SQL logical server SQL authentication administrator password. Used when sourceType=azure-sql-db.')
+param azureSqlAdminPassword string = ''
+
+@description('Require Microsoft Entra-only authentication for Azure SQL Database. Keep true for tenants with Safe Secrets policies.')
+param azureSqlAzureAdOnlyAuthentication bool = true
+
+@description('Azure SQL Database SKU name. Used when sourceType=azure-sql-db.')
+param azureSqlSkuName string = 'GP_Gen5_2'
+
+@description('Azure SQL Database SKU tier. Used when sourceType=azure-sql-db.')
+param azureSqlSkuTier string = 'GeneralPurpose'
+
+@description('Azure SQL Database SKU family. Used when sourceType=azure-sql-db.')
+param azureSqlSkuFamily string = 'Gen5'
+
+@description('Azure SQL Database vCore capacity. Used when sourceType=azure-sql-db.')
+param azureSqlSkuCapacity int = 2
+
+@description('Azure SQL Database maximum size in bytes. Defaults to 32 GiB. Used when sourceType=azure-sql-db.')
+param azureSqlMaxSizeBytes int = 34359738368
+
 @description('SQL Server VM administrator username. Used when sourceType=sql-server.')
 param sqlServerVmAdminUsername string = 'azureuser'
 
@@ -118,6 +143,7 @@ param fabricCapacitySku string = 'F8'
 param fabricAdminUpn string
 
 var token = toLower(uniqueString(subscription().id, resourceGroup().id, projectName, location))
+var operatorSqlFirewallIp = replace(operatorPublicIp, '/32', '')
 
 module network 'modules/networking.bicep' = {
   name: 'network-${token}'
@@ -187,9 +213,18 @@ module azureSqlDb 'modules/azure-sql-db.bicep' = if (sourceType == 'azure-sql-db
     tags: tags
     token: token
     databaseName: azureSqlDatabaseName
+    adminLogin: azureSqlAdminUser
+    adminPassword: azureSqlAdminPassword
     entraAdminLogin: sqlEntraAdminLogin
     entraAdminObjectId: sqlEntraAdminObjectId
+    azureAdOnlyAuthentication: azureSqlAzureAdOnlyAuthentication
     allowedBenchmarkIp: network.outputs.publicIpAddress
+    allowedOperatorIp: operatorSqlFirewallIp
+    skuName: azureSqlSkuName
+    skuTier: azureSqlSkuTier
+    skuFamily: azureSqlSkuFamily
+    skuCapacity: azureSqlSkuCapacity
+    maxSizeBytes: azureSqlMaxSizeBytes
   }
 }
 

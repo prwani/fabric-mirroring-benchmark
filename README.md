@@ -40,7 +40,7 @@ This list tracks the Microsoft Fabric mirroring source types from the Fabric ove
 | Azure Databricks | Metadata mirroring | Roadmap |
 | Azure Database for PostgreSQL | Database mirroring | Implemented and live deployment validated |
 | Azure Database for MySQL | Database mirroring, preview | Infra adapter implemented; mirroring validation pending |
-| Azure SQL Database | Database mirroring | Infra adapter implemented; HammerDB/Entra-only validation pending |
+| Azure SQL Database | Database mirroring | Infra + SQL-auth HammerDB scaffold implemented; live validation pending |
 | Azure SQL Managed Instance | Database mirroring | Experimental high-cost adapter scaffold; validation pending |
 | Dremio | Metadata mirroring, preview | Roadmap |
 | Google BigQuery | Database mirroring, preview | Roadmap |
@@ -57,7 +57,7 @@ This list tracks the Microsoft Fabric mirroring source types from the Fabric ove
 |---|---|---|---|---|
 | `sources/postgresql/` | Yes | TPROC-H scripts available | Default path live deployment validated | Uses PostgreSQL Flexible Server, logical WAL, and marker table. |
 | `sources/mysql/` | Yes | HammerDB-compatible source docs | Pending | MySQL mirroring is preview/tenant-gated; validate availability before benchmarking. |
-| `sources/azure-sql-db/` | Yes | HammerDB-compatible source docs | Pending | Uses Entra-only Azure SQL server and vCore database. HammerDB auth path needs validation. |
+| `sources/azure-sql-db/` | Yes | SQL Server TPROC-H scripts available | Pending | Uses vCore Azure SQL Database, Entra-only by default, optional SQL-auth path where tenant policy allows it, and shared VM/Fabric provisioning. |
 | `sources/sql-mi/` | Scaffold | HammerDB-compatible source docs | Pending | High-cost/long-running deployment; use only for deliberate tests. |
 | `sources/sql-server/` | Scaffold | HammerDB-compatible source docs | Pending | SQL Server mirroring usually requires gateway + CDC/Agent unless using newer supported paths. |
 

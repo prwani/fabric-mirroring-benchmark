@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "14615706975260582479"
+      "templateHash": "2387149675646594777"
     }
   },
   "parameters": {
@@ -222,6 +222,62 @@
         "description": "Azure SQL Database name. Used when sourceType=azure-sql-db."
       }
     },
+    "azureSqlAdminUser": {
+      "type": "string",
+      "defaultValue": "sqladmin",
+      "metadata": {
+        "description": "Azure SQL logical server SQL authentication administrator login. Used when sourceType=azure-sql-db."
+      }
+    },
+    "azureSqlAdminPassword": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Azure SQL logical server SQL authentication administrator password. Used when sourceType=azure-sql-db."
+      }
+    },
+    "azureSqlAzureAdOnlyAuthentication": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Require Microsoft Entra-only authentication for Azure SQL Database. Keep true for tenants with Safe Secrets policies."
+      }
+    },
+    "azureSqlSkuName": {
+      "type": "string",
+      "defaultValue": "GP_Gen5_2",
+      "metadata": {
+        "description": "Azure SQL Database SKU name. Used when sourceType=azure-sql-db."
+      }
+    },
+    "azureSqlSkuTier": {
+      "type": "string",
+      "defaultValue": "GeneralPurpose",
+      "metadata": {
+        "description": "Azure SQL Database SKU tier. Used when sourceType=azure-sql-db."
+      }
+    },
+    "azureSqlSkuFamily": {
+      "type": "string",
+      "defaultValue": "Gen5",
+      "metadata": {
+        "description": "Azure SQL Database SKU family. Used when sourceType=azure-sql-db."
+      }
+    },
+    "azureSqlSkuCapacity": {
+      "type": "int",
+      "defaultValue": 2,
+      "metadata": {
+        "description": "Azure SQL Database vCore capacity. Used when sourceType=azure-sql-db."
+      }
+    },
+    "azureSqlMaxSizeBytes": {
+      "type": "int",
+      "defaultValue": 34359738368,
+      "metadata": {
+        "description": "Azure SQL Database maximum size in bytes. Defaults to 32 GiB. Used when sourceType=azure-sql-db."
+      }
+    },
     "sqlServerVmAdminUsername": {
       "type": "string",
       "defaultValue": "azureuser",
@@ -259,7 +315,8 @@
     }
   },
   "variables": {
-    "token": "[toLower(uniqueString(subscription().id, resourceGroup().id, parameters('projectName'), parameters('location')))]"
+    "token": "[toLower(uniqueString(subscription().id, resourceGroup().id, parameters('projectName'), parameters('location')))]",
+    "operatorSqlFirewallIp": "[replace(parameters('operatorPublicIp'), '/32', '')]"
   },
   "resources": [
     {
@@ -1030,14 +1087,41 @@
           "databaseName": {
             "value": "[parameters('azureSqlDatabaseName')]"
           },
+          "adminLogin": {
+            "value": "[parameters('azureSqlAdminUser')]"
+          },
+          "adminPassword": {
+            "value": "[parameters('azureSqlAdminPassword')]"
+          },
           "entraAdminLogin": {
             "value": "[parameters('sqlEntraAdminLogin')]"
           },
           "entraAdminObjectId": {
             "value": "[parameters('sqlEntraAdminObjectId')]"
           },
+          "azureAdOnlyAuthentication": {
+            "value": "[parameters('azureSqlAzureAdOnlyAuthentication')]"
+          },
           "allowedBenchmarkIp": {
             "value": "[reference(resourceId('Microsoft.Resources/deployments', format('network-{0}', variables('token'))), '2025-04-01').outputs.publicIpAddress.value]"
+          },
+          "allowedOperatorIp": {
+            "value": "[variables('operatorSqlFirewallIp')]"
+          },
+          "skuName": {
+            "value": "[parameters('azureSqlSkuName')]"
+          },
+          "skuTier": {
+            "value": "[parameters('azureSqlSkuTier')]"
+          },
+          "skuFamily": {
+            "value": "[parameters('azureSqlSkuFamily')]"
+          },
+          "skuCapacity": {
+            "value": "[parameters('azureSqlSkuCapacity')]"
+          },
+          "maxSizeBytes": {
+            "value": "[parameters('azureSqlMaxSizeBytes')]"
           }
         },
         "template": {
@@ -1047,7 +1131,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "12190144985236389368"
+              "templateHash": "11495266736921285565"
             }
           },
           "parameters": {
@@ -1067,18 +1151,57 @@
               "type": "string",
               "defaultValue": "tpch"
             },
+            "adminLogin": {
+              "type": "string",
+              "defaultValue": "sqladmin"
+            },
+            "adminPassword": {
+              "type": "securestring"
+            },
             "entraAdminLogin": {
-              "type": "string"
+              "type": "string",
+              "defaultValue": ""
             },
             "entraAdminObjectId": {
-              "type": "string"
+              "type": "string",
+              "defaultValue": ""
+            },
+            "azureAdOnlyAuthentication": {
+              "type": "bool",
+              "defaultValue": true
             },
             "allowedBenchmarkIp": {
               "type": "string"
+            },
+            "allowedOperatorIp": {
+              "type": "string",
+              "defaultValue": ""
+            },
+            "skuName": {
+              "type": "string",
+              "defaultValue": "GP_Gen5_2"
+            },
+            "skuTier": {
+              "type": "string",
+              "defaultValue": "GeneralPurpose"
+            },
+            "skuFamily": {
+              "type": "string",
+              "defaultValue": "Gen5"
+            },
+            "skuCapacity": {
+              "type": "int",
+              "defaultValue": 2
+            },
+            "maxSizeBytes": {
+              "type": "int",
+              "defaultValue": 34359738368
             }
           },
           "variables": {
-            "serverName": "[format('sql-{0}-{1}', parameters('projectName'), parameters('token'))]"
+            "serverName": "[format('sql-{0}-{1}', parameters('projectName'), parameters('token'))]",
+            "enableEntraAdmin": "[and(not(empty(parameters('entraAdminLogin'))), not(empty(parameters('entraAdminObjectId'))))]",
+            "enableSqlAdmin": "[not(parameters('azureAdOnlyAuthentication'))]"
           },
           "resources": [
             {
@@ -1090,18 +1213,7 @@
               "identity": {
                 "type": "SystemAssigned"
               },
-              "properties": {
-                "publicNetworkAccess": "Enabled",
-                "minimalTlsVersion": "1.2",
-                "administrators": {
-                  "administratorType": "ActiveDirectory",
-                  "principalType": "User",
-                  "login": "[parameters('entraAdminLogin')]",
-                  "sid": "[parameters('entraAdminObjectId')]",
-                  "tenantId": "[tenant().tenantId]",
-                  "azureADOnlyAuthentication": true
-                }
-              }
+              "properties": "[union(union(createObject('publicNetworkAccess', 'Enabled', 'minimalTlsVersion', '1.2'), if(variables('enableSqlAdmin'), createObject('administratorLogin', parameters('adminLogin'), 'administratorLoginPassword', parameters('adminPassword')), createObject())), if(variables('enableEntraAdmin'), createObject('administrators', createObject('administratorType', 'ActiveDirectory', 'principalType', 'User', 'login', parameters('entraAdminLogin'), 'sid', parameters('entraAdminObjectId'), 'tenantId', tenant().tenantId, 'azureADOnlyAuthentication', parameters('azureAdOnlyAuthentication'))), createObject()))]"
             },
             {
               "type": "Microsoft.Sql/servers/firewallRules",
@@ -1129,25 +1241,40 @@
               ]
             },
             {
+              "condition": "[not(empty(parameters('allowedOperatorIp')))]",
+              "type": "Microsoft.Sql/servers/firewallRules",
+              "apiVersion": "2023-08-01",
+              "name": "[format('{0}/{1}', variables('serverName'), 'AllowOperatorIp')]",
+              "properties": {
+                "startIpAddress": "[parameters('allowedOperatorIp')]",
+                "endIpAddress": "[parameters('allowedOperatorIp')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers/firewallRules', variables('serverName'), 'AllowBenchmarkVm')]",
+                "[resourceId('Microsoft.Sql/servers', variables('serverName'))]"
+              ]
+            },
+            {
               "type": "Microsoft.Sql/servers/databases",
               "apiVersion": "2023-08-01",
               "name": "[format('{0}/{1}', variables('serverName'), parameters('databaseName'))]",
               "location": "[parameters('location')]",
               "tags": "[parameters('tags')]",
               "sku": {
-                "name": "GP_Gen5_2",
-                "tier": "GeneralPurpose",
-                "family": "Gen5",
-                "capacity": 2
+                "name": "[parameters('skuName')]",
+                "tier": "[parameters('skuTier')]",
+                "family": "[parameters('skuFamily')]",
+                "capacity": "[parameters('skuCapacity')]"
               },
               "properties": {
-                "maxSizeBytes": 34359738368,
+                "maxSizeBytes": "[parameters('maxSizeBytes')]",
                 "zoneRedundant": false,
                 "readScale": "Disabled",
                 "requestedBackupStorageRedundancy": "Local"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.Sql/servers/firewallRules', variables('serverName'), 'AllowBenchmarkVm')]",
+                "[resourceId('Microsoft.Sql/servers/firewallRules', variables('serverName'), 'AllowOperatorIp')]",
                 "[resourceId('Microsoft.Sql/servers', variables('serverName'))]"
               ]
             }

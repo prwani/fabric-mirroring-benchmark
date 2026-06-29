@@ -15,7 +15,29 @@ DEPLOYMENT_NAME="${DEPLOYMENT_NAME:-fabric-pg-mirror-bench}"
 require_env AZURE_SUBSCRIPTION_ID
 require_env ADMIN_UPN
 require_env OPERATOR_PUBLIC_IP
-require_env POSTGRES_ADMIN_PASSWORD
+
+SOURCE_TYPE="${SOURCE_TYPE:-postgresql}"
+case "$SOURCE_TYPE" in
+  postgresql)
+    require_env POSTGRES_ADMIN_PASSWORD
+    ;;
+  mysql)
+    require_env MYSQL_ADMIN_PASSWORD
+    ;;
+  azure-sql-db)
+    require_env SQL_ENTRA_ADMIN_LOGIN
+    require_env SQL_ENTRA_ADMIN_OBJECT_ID
+    if [[ "${AZURE_SQL_AAD_ONLY_AUTH:-true}" != "true" ]]; then
+      require_env AZURE_SQL_ADMIN_PASSWORD
+    fi
+    ;;
+  sql-mi | sql-server)
+    ;;
+  *)
+    echo "Unsupported SOURCE_TYPE: $SOURCE_TYPE" >&2
+    exit 1
+    ;;
+esac
 
 az account set --subscription "$AZURE_SUBSCRIPTION_ID"
 az group create --name "$RESOURCE_GROUP" --location "$LOCATION" --only-show-errors >/dev/null
@@ -31,12 +53,12 @@ az deployment group create \
   --template-file "$ROOT/infra/main.bicep" \
   --parameters \
     projectName="${PROJECT_NAME:-fpmb}" \
-    sourceType="${SOURCE_TYPE:-postgresql}" \
+    sourceType="$SOURCE_TYPE" \
     location="$LOCATION" \
     adminSshPublicKey="$SSH_KEY" \
     operatorPublicIp="$OPERATOR_PUBLIC_IP" \
     postgresAdminUser="${POSTGRES_ADMIN_USER:-pgadmin}" \
-    postgresAdminPassword="$POSTGRES_ADMIN_PASSWORD" \
+    postgresAdminPassword="${POSTGRES_ADMIN_PASSWORD:-}" \
     postgresDatabaseName="${POSTGRES_DATABASE:-tpch}" \
     postgresVersion="${POSTGRES_VERSION:-16}" \
     postgresSkuName="${POSTGRES_SKU_NAME:-Standard_D2ds_v5}" \
@@ -55,6 +77,14 @@ az deployment group create \
     sqlEntraAdminLogin="${SQL_ENTRA_ADMIN_LOGIN:-}" \
     sqlEntraAdminObjectId="${SQL_ENTRA_ADMIN_OBJECT_ID:-}" \
     azureSqlDatabaseName="${AZURE_SQL_DATABASE:-tpch}" \
+    azureSqlAdminUser="${AZURE_SQL_ADMIN_USER:-sqladmin}" \
+    azureSqlAdminPassword="${AZURE_SQL_ADMIN_PASSWORD:-}" \
+    azureSqlAzureAdOnlyAuthentication="${AZURE_SQL_AAD_ONLY_AUTH:-true}" \
+    azureSqlSkuName="${AZURE_SQL_SKU_NAME:-GP_Gen5_2}" \
+    azureSqlSkuTier="${AZURE_SQL_SKU_TIER:-GeneralPurpose}" \
+    azureSqlSkuFamily="${AZURE_SQL_SKU_FAMILY:-Gen5}" \
+    azureSqlSkuCapacity="${AZURE_SQL_SKU_CAPACITY:-2}" \
+    azureSqlMaxSizeBytes="${AZURE_SQL_MAX_SIZE_BYTES:-34359738368}" \
     sqlServerVmAdminUsername="${SQL_SERVER_VM_ADMIN_USERNAME:-azureuser}" \
     sqlServerVmAdminPassword="${SQL_SERVER_VM_ADMIN_PASSWORD:-}" \
     fabricCapacitySku="${FABRIC_CAPACITY_SKU:-F8}" \

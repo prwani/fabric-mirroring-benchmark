@@ -89,14 +89,14 @@ def main() -> int:
             access_token,
             {
                 "displayName": workspace_name,
-                "description": "Fabric PostgreSQL mirroring benchmark workspace",
+                "description": "Fabric mirroring benchmark workspace",
                 "capacityId": capacity_id,
             },
         )
 
     print(json.dumps({"workspace": workspace}, indent=2))
     print()
-    print("Next: create the mirrored database item for PostgreSQL through the Fabric Mirroring UI, Fabric REST API, or fabric-cli.")
+    print("Next: create the source-specific mirrored database item through the Fabric Mirroring UI, Fabric REST API, or fabric-cli.")
     print("REST API: https://learn.microsoft.com/fabric/mirroring/mirrored-database-rest-api")
     print("fabric-cli start example: fab start <workspace>.Workspace/<mirror>.MirroredDatabase")
     print("fabric-cli stop example:  fab stop <workspace>.Workspace/<mirror>.MirroredDatabase")

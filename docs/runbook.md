@@ -16,7 +16,7 @@ Important defaults:
 
 Scale factor 1 is the default initial data-load target for TPROC-H. Increase it only after the full run works at SF=1.
 
-For non-PostgreSQL sources, set `SOURCE_TYPE` and read the matching `sources/<source>/README.md` before deployment. PostgreSQL is the only currently live-validated default path.
+For non-PostgreSQL sources, set `SOURCE_TYPE` and read the matching `sources/<source>/README.md` before deployment. The same shared deployment script provisions the benchmark VM, Fabric capacity, networking, and monitoring; only the source adapter changes. PostgreSQL is the only currently live-validated default path.
 
 PostgreSQL deployments keep password authentication enabled and enable Microsoft Entra authentication by default. To assign a PostgreSQL Microsoft Entra administrator during deployment, set `POSTGRES_ENTRA_ADMIN_NAME`, `POSTGRES_ENTRA_ADMIN_OBJECT_ID`, and optionally `POSTGRES_ENTRA_ADMIN_PRINCIPAL_TYPE`.
 
@@ -41,12 +41,24 @@ To select a non-default source through the CLI:
 SOURCE_TYPE=mysql scripts/provision/deploy-azure.sh
 ```
 
+Azure SQL Database example:
+
+```bash
+SOURCE_TYPE=azure-sql-db \
+AZURE_RESOURCE_GROUP=rg-fabric-sqldb-mirror-bench \
+PROJECT_NAME=fsqlmb \
+scripts/provision/deploy-azure.sh
+```
+
+Azure SQL Database defaults to Microsoft Entra-only authentication because many enterprise tenants deny SQL authentication on Azure SQL. Set `SQL_ENTRA_ADMIN_LOGIN` and `SQL_ENTRA_ADMIN_OBJECT_ID`. Only set `AZURE_SQL_AAD_ONLY_AUTH=false` when your tenant policy explicitly allows SQL authentication.
+
 Record deployment outputs in `.env`, especially:
 
 - `POSTGRES_HOST`
 - `POSTGRES_SERVER_NAME`
 - `FABRIC_CAPACITY_ID`
 - benchmark VM public IP
+- for Azure SQL Database: `AZURE_SQL_HOST`, `AZURE_SQL_DATABASE`, and `AZURE_SQL_SQLCMD_ARGS`
 
 ## 3. Prepare the source database
 
@@ -77,6 +89,36 @@ scripts/provision/validate-postgres-mirroring.sh
 
 If `wal_level` or extension allow-list settings changed, restart PostgreSQL before loading data.
 
+Azure SQL Database-specific setup:
+
+Default Entra-only path:
+
+```bash
+sqlcmd -C -S "$AZURE_SQL_HOST" -d "$AZURE_SQL_DATABASE" -G \
+  -v FABRIC_ENTRA_PRINCIPAL="$SQL_ENTRA_ADMIN_LOGIN" \
+  -i scripts/provision/setup-azure-sql-entra-mirroring-prereqs.sql
+```
+
+SQL-auth path for tenants that allow it:
+
+```bash
+sqlcmd -C -S "$AZURE_SQL_HOST" -d master \
+  -U "$AZURE_SQL_ADMIN_USER" -P "$AZURE_SQL_ADMIN_PASSWORD" \
+  -v FABRIC_SQL_LOGIN="$AZURE_SQL_FABRIC_LOGIN" \
+     FABRIC_SQL_PASSWORD="$AZURE_SQL_FABRIC_PASSWORD" \
+     HAMMERDB_SQL_LOGIN="$AZURE_SQL_HAMMERDB_LOGIN" \
+     HAMMERDB_SQL_PASSWORD="$AZURE_SQL_HAMMERDB_PASSWORD" \
+  -i scripts/provision/setup-azure-sql-master.sql
+
+sqlcmd -C -S "$AZURE_SQL_HOST" -d "$AZURE_SQL_DATABASE" \
+  -U "$AZURE_SQL_ADMIN_USER" -P "$AZURE_SQL_ADMIN_PASSWORD" \
+  -v FABRIC_SQL_LOGIN="$AZURE_SQL_FABRIC_LOGIN" \
+     FABRIC_SQL_USER=fabric_user \
+     HAMMERDB_SQL_LOGIN="$AZURE_SQL_HAMMERDB_LOGIN" \
+     HAMMERDB_SQL_USER="$AZURE_SQL_HAMMERDB_LOGIN" \
+  -i scripts/provision/setup-azure-sql-mirroring-prereqs.sql
+```
+
 ## 4. Install HammerDB
 
 SSH to the benchmark VM, clone or copy this repo, then run:
@@ -103,6 +145,14 @@ psql "host=$POSTGRES_HOST port=5432 dbname=$POSTGRES_DATABASE user=$POSTGRES_ADM
   -f scripts/provision/setup-cdc-marker.sql
 ```
 
+For Azure SQL Database, use:
+
+```bash
+sqlcmd -C -S "$AZURE_SQL_HOST" -d "$AZURE_SQL_DATABASE" \
+  -U "$AZURE_SQL_ADMIN_USER" -P "$AZURE_SQL_ADMIN_PASSWORD" \
+  -i scripts/provision/setup-azure-sql-cdc-marker.sql
+```
+
 ## 6. Set up Fabric mirroring
 
 ```bash
@@ -117,6 +167,9 @@ Create the mirrored database item for Azure Database for PostgreSQL through one 
 - fabric-cli item commands: <https://microsoft.github.io/fabric-cli/examples/item_examples/#startstop-mirrored-databases>
 
 Select the TPROC-H tables and `public.fabric_cdc_latency_marker`.
+
+For Azure SQL Database, create a mirrored Azure SQL Database item and either mirror all data or select the `dbo` TPROC-H tables plus `dbo.fabric_cdc_latency_marker`. The source connection can use Basic authentication with the prepared Fabric SQL login, or another supported Fabric authentication method.
+In Entra-only deployments, use Organization Account, service principal, or workspace identity instead of Basic authentication.
 
 The REST API has two relevant operation groups:
 
@@ -148,6 +201,16 @@ python3 scripts/benchmark/measure-initial-sync.py \
   --fabric-sqlcmd-args "$FABRIC_SQLCMD_ARGS"
 ```
 
+For Azure SQL Database:
+
+```bash
+python3 scripts/benchmark/measure-initial-sync.py \
+  --source-type azure-sql-db \
+  --source-sqlcmd-args "$AZURE_SQL_SQLCMD_ARGS" \
+  --fabric-sqlcmd-args "$FABRIC_SQLCMD_ARGS" \
+  --tables "dbo.region,dbo.nation,dbo.supplier,dbo.customer,dbo.part,dbo.partsupp,dbo.orders,dbo.lineitem,dbo.fabric_cdc_latency_marker"
+```
+
 Store raw observations under `results/`.
 
 ## 8. Measure CDC latency
@@ -158,6 +221,12 @@ Run optional source load:
 "${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-run-tproch.tcl
 ```
 
+For Azure SQL Database:
+
+```bash
+"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-run-sqlserver-tproch.tcl
+```
+
 Then run controlled marker measurement:
 
 ```bash
@@ -165,6 +234,16 @@ python3 scripts/benchmark/run-cdc-latency-test.py \
   --pg-conn "$POSTGRES_PSQL_CONN" \
   --fabric-sqlcmd-args "$FABRIC_SQLCMD_ARGS" \
   --fabric-marker-table "$FABRIC_MARKER_TABLE"
+```
+
+For Azure SQL Database:
+
+```bash
+python3 scripts/benchmark/run-cdc-latency-test.py \
+  --source-type azure-sql-db \
+  --source-sqlcmd-args "$AZURE_SQL_SQLCMD_ARGS" \
+  --fabric-sqlcmd-args "$FABRIC_SQLCMD_ARGS" \
+  --fabric-marker-table dbo.fabric_cdc_latency_marker
 ```
 
 For larger insert/update batches, run the bulk CDC test. This measures when the entire batch is visible in Fabric and records latency from both first and last source commit timestamps:

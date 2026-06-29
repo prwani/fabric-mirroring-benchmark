@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Write PostgreSQL marker rows and poll a Fabric SQL endpoint for visibility.
+"""Write source marker rows and poll a Fabric SQL endpoint for visibility.
 
 The marker approach complements platform metrics:
-- Azure Monitor captures PostgreSQL source health, WAL, CPU, IOPS, and connections.
+- Azure Monitor captures source health, CPU, IOPS, and connections.
 - Fabric monitoring surfaces mirror status/replication progress where available.
 - This script calculates an end-to-end user-observed latency for controlled rows.
 """
@@ -40,8 +40,10 @@ def run_psql(conn: str, sql: str) -> str:
     return result.stdout.strip()
 
 
-def run_sqlcmd(sqlcmd_args: str, sql: str) -> str:
+def run_sqlcmd(sqlcmd_args: str, sql: str, separator: str | None = None) -> str:
     command = ["sqlcmd", *shlex.split(sqlcmd_args), "-Q", f"SET NOCOUNT ON; {sql}", "-h", "-1", "-W"]
+    if separator:
+        command.extend(["-s", separator])
     result = subprocess.run(command, check=True, text=True, capture_output=True)
     lines = [
         line.strip()
@@ -72,6 +74,20 @@ def insert_marker(pg_conn: str, batch_id: str) -> tuple[str, str, str]:
     return marker_id, source_send_ts, source_commit_ts
 
 
+def insert_marker_sqlserver(sqlcmd_args: str, batch_id: str) -> tuple[str, str, str]:
+    send_ts = iso(utc_now())
+    sql = f"""
+    INSERT INTO dbo.fabric_cdc_latency_marker (batch_id, operation_type, source_send_ts, payload)
+    OUTPUT
+      CONVERT(varchar(36), inserted.marker_id),
+      CONVERT(varchar(33), inserted.source_send_ts, 126) + 'Z',
+      CONVERT(varchar(33), inserted.source_commit_ts, 126) + 'Z'
+    VALUES (N'{batch_id}', N'insert', CONVERT(datetime2(7), '{send_ts}', 127), REPLICATE(N'x', 256));
+    """
+    marker_id, source_send_ts, source_commit_ts = run_sqlcmd(sqlcmd_args, sql, separator="|").split("|")
+    return marker_id, source_send_ts, source_commit_ts
+
+
 def marker_visible(sqlcmd_args: str, marker_id: str, table_name: str) -> bool:
     sql = f"SELECT COUNT(*) FROM {table_name} WHERE CAST(marker_id AS varchar(36)) = '{marker_id}';"
     return run_sqlcmd(sqlcmd_args, sql).strip() == "1"
@@ -79,7 +95,9 @@ def marker_visible(sqlcmd_args: str, marker_id: str, table_name: str) -> bool:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--pg-conn", default=os.environ.get("POSTGRES_PSQL_CONN"), required=os.environ.get("POSTGRES_PSQL_CONN") is None)
+    parser.add_argument("--source-type", choices=["postgresql", "azure-sql-db"], default=os.environ.get("SOURCE_TYPE", "postgresql"))
+    parser.add_argument("--pg-conn", default=os.environ.get("POSTGRES_PSQL_CONN"))
+    parser.add_argument("--source-sqlcmd-args", default=os.environ.get("AZURE_SQL_SQLCMD_ARGS"))
     parser.add_argument("--fabric-sqlcmd-args", default=os.environ.get("FABRIC_SQLCMD_ARGS"), required=os.environ.get("FABRIC_SQLCMD_ARGS") is None)
     parser.add_argument("--fabric-marker-table", default=os.environ.get("FABRIC_MARKER_TABLE", "dbo.fabric_cdc_latency_marker"))
     parser.add_argument("--batches", type=int, default=int(os.environ.get("CDC_MARKER_BATCHES", "60")))
@@ -92,6 +110,11 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if args.source_type == "postgresql" and not args.pg_conn:
+        raise SystemExit("Provide --pg-conn or POSTGRES_PSQL_CONN for PostgreSQL marker writes.")
+    if args.source_type == "azure-sql-db" and not args.source_sqlcmd_args:
+        raise SystemExit("Provide --source-sqlcmd-args or AZURE_SQL_SQLCMD_ARGS for Azure SQL marker writes.")
+
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
 
@@ -101,7 +124,10 @@ def main() -> int:
 
         for _ in range(args.batches):
             batch_id = f"batch-{uuid4()}"
-            marker_id, source_send_ts, source_commit_ts = insert_marker(args.pg_conn, batch_id)
+            if args.source_type == "azure-sql-db":
+                marker_id, source_send_ts, source_commit_ts = insert_marker_sqlserver(args.source_sqlcmd_args, batch_id)
+            else:
+                marker_id, source_send_ts, source_commit_ts = insert_marker(args.pg_conn, batch_id)
             deadline = time.monotonic() + args.timeout_seconds
 
             while time.monotonic() < deadline:

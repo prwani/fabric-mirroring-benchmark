@@ -3,7 +3,7 @@
 
 Start Fabric mirroring first, then run this script with the list of selected
 tables. It records the time until Fabric table counts are at least the captured
-PostgreSQL source counts.
+source counts.
 """
 
 from __future__ import annotations
@@ -43,13 +43,19 @@ def table_count_pg(conn: str, table: str) -> int:
     return int(run_psql(conn, f"SELECT COUNT(*) FROM {table};"))
 
 
+def table_count_sqlcmd(sqlcmd_args: str, table: str) -> int:
+    return int(run_sqlcmd(sqlcmd_args, f"SELECT COUNT(*) FROM {table};"))
+
+
 def table_count_fabric(sqlcmd_args: str, table: str) -> int:
     return int(run_sqlcmd(sqlcmd_args, f"SELECT COUNT(*) FROM {table};"))
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--pg-conn", default=os.environ.get("POSTGRES_PSQL_CONN"), required=os.environ.get("POSTGRES_PSQL_CONN") is None)
+    parser.add_argument("--source-type", choices=["postgresql", "azure-sql-db"], default=os.environ.get("SOURCE_TYPE", "postgresql"))
+    parser.add_argument("--pg-conn", default=os.environ.get("POSTGRES_PSQL_CONN"))
+    parser.add_argument("--source-sqlcmd-args", default=os.environ.get("AZURE_SQL_SQLCMD_ARGS"))
     parser.add_argument("--fabric-sqlcmd-args", default=os.environ.get("FABRIC_SQLCMD_ARGS"), required=os.environ.get("FABRIC_SQLCMD_ARGS") is None)
     parser.add_argument("--tables", default=os.environ.get("MIRRORED_TABLES", "public.region,public.nation,public.supplier,public.customer,public.part,public.partsupp,public.orders,public.lineitem,public.fabric_cdc_latency_marker"))
     parser.add_argument("--fabric-schema", default=os.environ.get("FABRIC_SCHEMA", "dbo"))
@@ -57,13 +63,20 @@ def main() -> int:
     parser.add_argument("--timeout-seconds", type=float, default=float(os.environ.get("INITIAL_SYNC_TIMEOUT_SECONDS", "14400")))
     parser.add_argument("--output", default=os.environ.get("INITIAL_SYNC_RESULTS_FILE", "results/initial-sync.json"))
     args = parser.parse_args()
+    if args.source_type == "postgresql" and not args.pg_conn:
+        raise SystemExit("Provide --pg-conn or POSTGRES_PSQL_CONN for PostgreSQL source counts.")
+    if args.source_type == "azure-sql-db" and not args.source_sqlcmd_args:
+        raise SystemExit("Provide --source-sqlcmd-args or AZURE_SQL_SQLCMD_ARGS for Azure SQL source counts.")
 
     started_at = utc_now()
     source_counts: dict[str, int] = {}
     tables = [table.strip() for table in args.tables.split(",") if table.strip()]
 
     for table in tables:
-        source_counts[table] = table_count_pg(args.pg_conn, table)
+        if args.source_type == "azure-sql-db":
+            source_counts[table] = table_count_sqlcmd(args.source_sqlcmd_args, table)
+        else:
+            source_counts[table] = table_count_pg(args.pg_conn, table)
 
     deadline = time.monotonic() + args.timeout_seconds
     observations: list[dict[str, object]] = []
