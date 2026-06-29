@@ -59,7 +59,7 @@ az deployment group create \
     operatorPublicIp="$OPERATOR_PUBLIC_IP" \
     postgresAdminUser="${POSTGRES_ADMIN_USER:-pgadmin}" \
     postgresAdminPassword="${POSTGRES_ADMIN_PASSWORD:-}" \
-    postgresDatabaseName="${POSTGRES_DATABASE:-tpch}" \
+    postgresDatabaseName="${POSTGRES_DATABASE:-tprocc}" \
     postgresVersion="${POSTGRES_VERSION:-16}" \
     postgresSkuName="${POSTGRES_SKU_NAME:-Standard_D2ds_v5}" \
     postgresSkuTier="${POSTGRES_SKU_TIER:-GeneralPurpose}" \
@@ -70,13 +70,13 @@ az deployment group create \
     postgresEntraAdminPrincipalType="${POSTGRES_ENTRA_ADMIN_PRINCIPAL_TYPE:-User}" \
     mysqlAdminUser="${MYSQL_ADMIN_USER:-mysqladmin}" \
     mysqlAdminPassword="${MYSQL_ADMIN_PASSWORD:-}" \
-    mysqlDatabaseName="${MYSQL_DATABASE:-tpch}" \
+    mysqlDatabaseName="${MYSQL_DATABASE:-tprocc}" \
     mysqlVersion="${MYSQL_VERSION:-8.0.21}" \
     mysqlSkuName="${MYSQL_SKU_NAME:-Standard_D2ds_v4}" \
     mysqlStorageGb="${MYSQL_STORAGE_GB:-128}" \
     sqlEntraAdminLogin="${SQL_ENTRA_ADMIN_LOGIN:-}" \
     sqlEntraAdminObjectId="${SQL_ENTRA_ADMIN_OBJECT_ID:-}" \
-    azureSqlDatabaseName="${AZURE_SQL_DATABASE:-tpch}" \
+    azureSqlDatabaseName="${AZURE_SQL_DATABASE:-tprocc}" \
     azureSqlAdminUser="${AZURE_SQL_ADMIN_USER:-sqladmin}" \
     azureSqlAdminPassword="${AZURE_SQL_ADMIN_PASSWORD:-}" \
     azureSqlAzureAdOnlyAuthentication="${AZURE_SQL_AAD_ONLY_AUTH:-true}" \

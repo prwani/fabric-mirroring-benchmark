@@ -243,7 +243,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--fabric-marker-table", default=os.environ.get("FABRIC_MARKER_TABLE", "_public.fabric_cdc_latency_marker"))
     parser.add_argument("--fabric-sqlcmd-args", default=os.environ.get("FABRIC_SQLCMD_ARGS"))
     parser.add_argument("--fabric-odbc-server", default=os.environ.get("FABRIC_ODBC_SERVER"))
-    parser.add_argument("--fabric-database", default=os.environ.get("FABRIC_DATABASE", "tpch"))
+    parser.add_argument("--fabric-database", default=os.environ.get("FABRIC_DATABASE", "tprocc"))
     parser.add_argument(
         "--fabric-access-token-command",
         default=os.environ.get(

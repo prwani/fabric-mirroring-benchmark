@@ -75,9 +75,7 @@ sqlcmd -C -S "$AZURE_SQL_HOST" -d "$AZURE_SQL_DATABASE" \
 
 ## HammerDB workload
 
-Prefer **TPROC-C** for Azure SQL mirroring latency tests because Azure SQL Database is most commonly mirrored from an OLTP application source. Keep TPROC-H as an optional analytical initial-load/reference dataset.
-
-Use the SQL Server TPROC-H HammerDB scripts. They are source-specific workload scripts, while VM/Fabric deployment remains shared.
+Use **TPROC-C** for Azure SQL mirroring latency tests because Azure SQL Database is most commonly mirrored from an OLTP application source.
 
 For Entra-only tenants, grant the benchmark VM managed identity access to Azure SQL and use HammerDB's SQL Server Entra/MSI mode:
 
@@ -112,31 +110,6 @@ After Fabric mirroring is configured for the `tprocc` database, run:
 "${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-run-sqlserver-tprocc.tcl
 ```
 
-For TPROC-H connectivity/schema state, use:
-
-```bash
-"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-check-sqlserver-tproch.tcl
-```
-
-```bash
-export AZURE_SQL_SQLCMD_ARGS="-C -S $AZURE_SQL_HOST -d $AZURE_SQL_DATABASE -U $AZURE_SQL_ADMIN_USER -P '$AZURE_SQL_ADMIN_PASSWORD'"
-"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-build-sqlserver-tproch.tcl
-```
-
-After the TPROC-H build, create the marker table:
-
-```bash
-sqlcmd -C -S "$AZURE_SQL_HOST" -d "$AZURE_SQL_DATABASE" \
-  -U "$AZURE_SQL_ADMIN_USER" -P "$AZURE_SQL_ADMIN_PASSWORD" \
-  -i scripts/provision/setup-azure-sql-cdc-marker.sql
-```
-
-For query workload after mirroring:
-
-```bash
-"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-run-sqlserver-tproch.tcl
-```
-
 ## Measurement scripts
 
 The shared measurement scripts can use Azure SQL as the source without duplicating Fabric polling logic:
@@ -146,7 +119,7 @@ python3 scripts/benchmark/measure-initial-sync.py \
   --source-type azure-sql-db \
   --source-sqlcmd-args "$AZURE_SQL_SQLCMD_ARGS" \
   --fabric-sqlcmd-args "$FABRIC_SQLCMD_ARGS" \
-  --tables "dbo.region,dbo.nation,dbo.supplier,dbo.customer,dbo.part,dbo.partsupp,dbo.orders,dbo.lineitem,dbo.fabric_cdc_latency_marker"
+  --tables "dbo.warehouse,dbo.district,dbo.customer,dbo.history,dbo.orders,dbo.new_order,dbo.order_line,dbo.stock,dbo.item,dbo.fabric_cdc_latency_marker"
 
 python3 scripts/benchmark/run-cdc-latency-test.py \
   --source-type azure-sql-db \
@@ -161,21 +134,22 @@ python3 scripts/benchmark/run-cdc-latency-test.py \
 
 ## Live validation notes
 
-The Sweden Central Azure SQL source was prepared with HammerDB TPROC-H scale factor 1 using VM managed identity authentication:
+The Sweden Central Azure SQL source uses HammerDB TPROC-C with VM managed identity authentication:
 
 | Table | Source rows |
 |---|---:|
-| `dbo.region` | 5 |
-| `dbo.nation` | 25 |
-| `dbo.supplier` | 10,000 |
-| `dbo.customer` | 150,000 |
-| `dbo.part` | 200,000 |
-| `dbo.partsupp` | 800,000 |
-| `dbo.orders` | 1,500,000 |
-| `dbo.lineitem` | 6,002,677 |
+| `dbo.warehouse` | 10 |
+| `dbo.district` | 100 |
+| `dbo.item` | 100,000 |
+| `dbo.stock` | 1,000,000 |
+| `dbo.customer` | 300,000 |
+| `dbo.orders` | 300,000 |
+| `dbo.order_line` | approximately 3,000,000 |
+| `dbo.new_order` | 90,000 |
+| `dbo.history` | 300,000 |
 | `dbo.fabric_cdc_latency_marker` | 0 |
 
-Create the Fabric mirrored Azure SQL Database item in workspace `fsqlmb-benchmark`, connect to `sql-fsqlmb-53vwnrvnudnko.database.windows.net` / `tpch`, and select the tables above. Use Organization Account, service principal, or workspace identity because SQL Basic authentication is blocked when the Azure SQL server is Entra-only.
+Create the Fabric mirrored Azure SQL Database item in workspace `fsqlmb-benchmark`, connect to `sql-fsqlmb-53vwnrvnudnko.database.windows.net` / `tprocc`, and select the tables above. Use Organization Account, service principal, or workspace identity because SQL Basic authentication is blocked when the Azure SQL server is Entra-only.
 
 ## Notes
 

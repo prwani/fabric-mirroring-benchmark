@@ -4,11 +4,11 @@ HammerDB TPROC-C is the next workload to add when the benchmark needs realistic 
 
 ## Why TPROC-C
 
-TPROC-H is useful for analytical data generation and query pressure, but it is not a write-heavy workload after the initial build. TPROC-C exercises transactional insert/update/delete paths and is a better source workload for observing Fabric Mirroring under continuous CDC pressure.
+TPROC-C exercises transactional insert/update/delete paths and is the benchmark workload for observing Fabric Mirroring under continuous CDC pressure.
 
 ## Isolation model
 
-Run TPROC-C in a separate PostgreSQL database or schema from TPROC-H. The validated baseline uses TPROC-H tables in the `tpch` database, including `lineitem`. TPROC-C has a different table set, so keeping it separate avoids corrupting the TPROC-H baseline and makes Fabric table selection clearer.
+Run TPROC-C in its own PostgreSQL database named `tprocc`. This keeps the source database aligned with the workload being mirrored and makes Fabric table selection clear.
 
 Example TPROC-C tables include:
 
@@ -85,4 +85,4 @@ psql "host=$POSTGRES_HOST port=5432 dbname=$TPROC_C_DATABASE user=$POSTGRES_ADMI
 
 Create a new Fabric mirrored database item for the `tprocc` PostgreSQL database, or add a separate mirroring configuration if your tenant workflow supports it. Select the TPROC-C tables and `public.fabric_cdc_latency_marker`.
 
-Keep this separate from the TPROC-H mirrored database so the existing `tpch` baseline remains stable.
+Mirror the TPROC-C database and select the TPROC-C tables plus `public.fabric_cdc_latency_marker`.

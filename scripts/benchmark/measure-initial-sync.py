@@ -57,7 +57,7 @@ def main() -> int:
     parser.add_argument("--pg-conn", default=os.environ.get("POSTGRES_PSQL_CONN"))
     parser.add_argument("--source-sqlcmd-args", default=os.environ.get("AZURE_SQL_SQLCMD_ARGS"))
     parser.add_argument("--fabric-sqlcmd-args", default=os.environ.get("FABRIC_SQLCMD_ARGS"), required=os.environ.get("FABRIC_SQLCMD_ARGS") is None)
-    parser.add_argument("--tables", default=os.environ.get("MIRRORED_TABLES", "public.region,public.nation,public.supplier,public.customer,public.part,public.partsupp,public.orders,public.lineitem,public.fabric_cdc_latency_marker"))
+    parser.add_argument("--tables", default=os.environ.get("MIRRORED_TABLES", "public.warehouse,public.district,public.customer,public.history,public.orders,public.new_order,public.order_line,public.stock,public.item,public.fabric_cdc_latency_marker"))
     parser.add_argument("--fabric-schema", default=os.environ.get("FABRIC_SCHEMA", "dbo"))
     parser.add_argument("--poll-seconds", type=float, default=float(os.environ.get("INITIAL_SYNC_POLL_SECONDS", "30")))
     parser.add_argument("--timeout-seconds", type=float, default=float(os.environ.get("INITIAL_SYNC_TIMEOUT_SECONDS", "14400")))

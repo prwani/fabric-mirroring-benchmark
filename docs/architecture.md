@@ -20,11 +20,11 @@ Implemented adapters live under `sources/<source>/` and own source-specific prer
 
 ## Measurement model
 
-Initial sync measures wall-clock time from starting Fabric mirroring to completion/status plus row-count parity between PostgreSQL and the mirrored target.
+Initial sync measures wall-clock time from starting Fabric mirroring to completion/status plus row-count parity between the TPROC-C source tables and the mirrored target.
 
-CDC latency uses controlled marker rows in PostgreSQL. The polling client queries the Fabric target until each marker appears and calculates observed latency. Platform metrics are captured alongside this:
+CDC latency uses controlled marker rows while HammerDB TPROC-C generates transactional source pressure. The polling client queries the Fabric target until each marker appears and calculates observed latency. Platform metrics are captured alongside this:
 
-- Azure Monitor for PostgreSQL source-side health such as CPU, memory, storage, connections, network bytes, and WAL/replication-related metrics where exposed.
+- Azure Monitor for source-side health such as CPU, memory, storage, connections, network bytes, and WAL/log-related metrics where exposed.
 - Fabric monitoring UI/API for mirroring status, sync progress, and replication latency where available in the tenant.
 
 Marker-based latency remains the benchmark source of truth because it measures user-observable end-to-end freshness.

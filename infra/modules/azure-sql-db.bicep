@@ -2,7 +2,7 @@ param projectName string
 param location string
 param tags object
 param token string
-param databaseName string = 'tpch'
+param databaseName string = 'tprocc'
 param adminLogin string = 'sqladmin'
 @secure()
 param adminPassword string

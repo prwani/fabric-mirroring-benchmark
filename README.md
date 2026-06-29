@@ -4,7 +4,7 @@ Benchmark harness for measuring Microsoft Fabric Mirroring initial sync time and
 
 The validated default source is **Azure Database for PostgreSQL Flexible Server**. The repo is being structured as a reusable framework: common Fabric capacity/workspace setup, HammerDB VM provisioning, measurement scripts, and result summarization are shared, while source-specific prerequisites live under `sources/<source>/`.
 
-The default experiment deploys to **Sweden Central** and uses **HammerDB TPROC-H scale factor 1** for the initial data-load and initial mirror-sync measurement. Region, scale factor, source type, database SKU, Fabric capacity SKU, and workload settings are configurable.
+The default experiment deploys to **Sweden Central** and uses **HammerDB TPROC-C** for both initial mirror-sync data and transactional change replication pressure. Region, warehouse count, source type, database SKU, Fabric capacity SKU, and workload settings are configurable.
 
 ## Deploy to Azure
 
@@ -40,7 +40,7 @@ This list tracks the Microsoft Fabric mirroring source types from the Fabric ove
 | Azure Databricks | Metadata mirroring | Roadmap |
 | Azure Database for PostgreSQL | Database mirroring | Implemented and live deployment validated |
 | Azure Database for MySQL | Database mirroring, preview | Infra adapter implemented; mirroring validation pending |
-| Azure SQL Database | Database mirroring | Infra + SQL-auth HammerDB scaffold implemented; live validation pending |
+| Azure SQL Database | Database mirroring | TPROC-C infra and HammerDB MSI path implemented; Fabric mirroring validation pending |
 | Azure SQL Managed Instance | Database mirroring | Experimental high-cost adapter scaffold; validation pending |
 | Dremio | Metadata mirroring, preview | Roadmap |
 | Google BigQuery | Database mirroring, preview | Roadmap |
@@ -55,9 +55,9 @@ This list tracks the Microsoft Fabric mirroring source types from the Fabric ove
 
 | Source adapter | Infra | HammerDB assets | Fabric mirroring validation | Notes |
 |---|---|---|---|---|
-| `sources/postgresql/` | Yes | TPROC-H scripts available | Default path live deployment validated | Uses PostgreSQL Flexible Server, logical WAL, and marker table. |
+| `sources/postgresql/` | Yes | TPROC-C scripts available | Default path live deployment validated | Uses PostgreSQL Flexible Server, logical WAL, transactional TPROC-C tables, and marker table. |
 | `sources/mysql/` | Yes | HammerDB-compatible source docs | Pending | MySQL mirroring is preview/tenant-gated; validate availability before benchmarking. |
-| `sources/azure-sql-db/` | Yes | SQL Server TPROC-H scripts available | Pending | Uses vCore Azure SQL Database, Entra-only by default, optional SQL-auth path where tenant policy allows it, and shared VM/Fabric provisioning. |
+| `sources/azure-sql-db/` | Yes | SQL Server TPROC-C scripts available | Pending | Uses vCore Azure SQL Database, Entra-only by default, VM managed identity for HammerDB, and shared VM/Fabric provisioning. |
 | `sources/sql-mi/` | Scaffold | HammerDB-compatible source docs | Pending | High-cost/long-running deployment; use only for deliberate tests. |
 | `sources/sql-server/` | Scaffold | HammerDB-compatible source docs | Pending | SQL Server mirroring usually requires gateway + CDC/Agent unless using newer supported paths. |
 
@@ -67,7 +67,7 @@ This list tracks the Microsoft Fabric mirroring source types from the Fabric ove
 |---|---:|---|
 | Source type | `postgresql` | Validated default and Deploy to Azure button baseline. |
 | Azure region | `swedencentral` | User-requested default; configurable for other regions. |
-| TPROC-H scale factor | `1` | Cost- and time-friendly first run; roughly 1 GB logical TPC-H scale before indexes/overhead. |
+| TPROC-C warehouses | `10` | Transactional OLTP-shaped source with meaningful initial data and sustained writes. |
 | PostgreSQL tier/SKU | `GeneralPurpose` / `Standard_D2ds_v5` | Fabric mirroring does not support Burstable tier. |
 | PostgreSQL version | `16` | PostgreSQL 14+ is required for Fabric mirroring. |
 | PostgreSQL auth | PostgreSQL password auth + Microsoft Entra auth | Fabric mirroring setup can use either supported authentication flow. |
@@ -77,7 +77,7 @@ The PostgreSQL template enables logical replication prerequisites and allow-list
 
 ## Blog
 
-The first end-to-end PostgreSQL baseline write-up is available in `docs/blog.md`.
+The blog draft in `docs/blog.md` now tracks the TPROC-C-only benchmark direction.
 
 Static validation available before live deployment:
 
@@ -103,4 +103,4 @@ python3 -m py_compile scripts/provision/setup-fabric-items.py scripts/benchmark/
    scripts/provision/install-hammerdb.sh
    ```
 
-4. Follow `docs/runbook.md` and the relevant `sources/<source>/README.md` for source-specific setup, Fabric mirroring setup, initial sync measurement, CDC latency measurement, and cleanup.
+4. Follow `docs/runbook.md` and the relevant `sources/<source>/README.md` to build TPROC-C, configure Fabric mirroring, measure initial sync, measure CDC latency, and clean up.

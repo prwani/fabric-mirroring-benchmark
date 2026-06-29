@@ -5,7 +5,7 @@ param token string
 param adminUser string
 @secure()
 param adminPassword string
-param databaseName string = 'tpch'
+param databaseName string = 'tprocc'
 @allowed(['14', '15', '16'])
 param version string = '16'
 param skuName string = 'Standard_D2ds_v5'

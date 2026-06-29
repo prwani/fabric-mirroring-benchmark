@@ -40,7 +40,7 @@ param postgresAdminUser string = 'pgadmin'
 param postgresAdminPassword string
 
 @description('PostgreSQL benchmark database name.')
-param postgresDatabaseName string = 'tpch'
+param postgresDatabaseName string = 'tprocc'
 
 @description('PostgreSQL major version. Fabric mirroring requires PostgreSQL 14 or later.')
 @allowed(['14', '15', '16'])
@@ -82,7 +82,7 @@ param mysqlAdminUser string = 'mysqladmin'
 param mysqlAdminPassword string = ''
 
 @description('MySQL benchmark database name. Used when sourceType=mysql.')
-param mysqlDatabaseName string = 'tpch'
+param mysqlDatabaseName string = 'tprocc'
 
 @description('MySQL Flexible Server version. Used when sourceType=mysql.')
 param mysqlVersion string = '8.0.21'
@@ -101,7 +101,7 @@ param sqlEntraAdminLogin string = ''
 param sqlEntraAdminObjectId string = ''
 
 @description('Azure SQL Database name. Used when sourceType=azure-sql-db.')
-param azureSqlDatabaseName string = 'tpch'
+param azureSqlDatabaseName string = 'tprocc'
 
 @description('Azure SQL logical server SQL authentication administrator login. Used when sourceType=azure-sql-db.')
 param azureSqlAdminUser string = 'sqladmin'

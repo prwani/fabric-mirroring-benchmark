@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "2387149675646594777"
+      "templateHash": "18426863027956754245"
     }
   },
   "parameters": {
@@ -82,7 +82,7 @@
     },
     "postgresDatabaseName": {
       "type": "string",
-      "defaultValue": "tpch",
+      "defaultValue": "tprocc",
       "metadata": {
         "description": "PostgreSQL benchmark database name."
       }
@@ -174,7 +174,7 @@
     },
     "mysqlDatabaseName": {
       "type": "string",
-      "defaultValue": "tpch",
+      "defaultValue": "tprocc",
       "metadata": {
         "description": "MySQL benchmark database name. Used when sourceType=mysql."
       }
@@ -217,7 +217,7 @@
     },
     "azureSqlDatabaseName": {
       "type": "string",
-      "defaultValue": "tpch",
+      "defaultValue": "tprocc",
       "metadata": {
         "description": "Azure SQL Database name. Used when sourceType=azure-sql-db."
       }
@@ -627,7 +627,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "17559000103325746884"
+              "templateHash": "694283638249934541"
             }
           },
           "parameters": {
@@ -651,7 +651,7 @@
             },
             "databaseName": {
               "type": "string",
-              "defaultValue": "tpch"
+              "defaultValue": "tprocc"
             },
             "version": {
               "type": "string",
@@ -926,7 +926,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "1188483361404760939"
+              "templateHash": "4480727469848632853"
             }
           },
           "parameters": {
@@ -950,7 +950,7 @@
             },
             "databaseName": {
               "type": "string",
-              "defaultValue": "tpch"
+              "defaultValue": "tprocc"
             },
             "version": {
               "type": "string",
@@ -1131,7 +1131,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "11495266736921285565"
+              "templateHash": "15683357686713320041"
             }
           },
           "parameters": {
@@ -1149,7 +1149,7 @@
             },
             "databaseName": {
               "type": "string",
-              "defaultValue": "tpch"
+              "defaultValue": "tprocc"
             },
             "adminLogin": {
               "type": "string",

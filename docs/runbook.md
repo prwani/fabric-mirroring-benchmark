@@ -8,13 +8,13 @@ Important defaults:
 
 - `AZURE_LOCATION=swedencentral`
 - `SOURCE_TYPE=postgresql`
-- `TPROC_H_SCALE_FACTOR=1`
+- `TPROC_C_WAREHOUSES=10`
 - `FABRIC_CAPACITY_SKU=F8`
 - `POSTGRES_SKU_TIER=GeneralPurpose`
 - `POSTGRES_SKU_NAME=Standard_D2ds_v5`
 - `POSTGRES_ENABLE_ENTRA_AUTH=true`
 
-Scale factor 1 is the default initial data-load target for TPROC-H. Increase it only after the full run works at SF=1.
+Ten warehouses is the default initial data-load target for TPROC-C. Increase it only after the full run works at 10 warehouses.
 
 For non-PostgreSQL sources, set `SOURCE_TYPE` and read the matching `sources/<source>/README.md` before deployment. The same shared deployment script provisions the benchmark VM, Fabric capacity, networking, and monitoring; only the source adapter changes. PostgreSQL is the only currently live-validated default path.
 
@@ -73,7 +73,7 @@ Record deployment outputs in `.env`, especially:
 - `POSTGRES_SERVER_NAME`
 - `FABRIC_CAPACITY_ID`
 - benchmark VM public IP
-- for Azure SQL Database: `AZURE_SQL_HOST`, `AZURE_SQL_DATABASE`, and `AZURE_SQL_SQLCMD_ARGS`
+- for Azure SQL Database: `AZURE_SQL_HOST`, `AZURE_SQL_DATABASE=tprocc`, `AZURE_SQL_MSI_OBJECT_ID`, and `AZURE_SQL_SQLCMD_ARGS`
 
 ## 3. Prepare the source database
 
@@ -144,13 +144,22 @@ scripts/provision/install-hammerdb.sh
 
 Set `HAMMERDB_CLI` if `hammerdbcli` is not on `PATH`.
 
-## 5. Build TPROC-H data
+## 5. Build TPROC-C data
+
+For PostgreSQL:
 
 ```bash
-"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-build-tproch.tcl
+export TPROC_C_DATABASE=tprocc
+export TPROC_C_USER=tprocc
+export TPROC_C_PASSWORD="<benchmark-user-password>"
+export TPROC_C_WAREHOUSES=10
+export TPROC_C_BUILD_VUSERS=4
+
+"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-build-tprocc.tcl
+"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-check-tprocc.tcl
 ```
 
-For Azure SQL Database transactional mirroring tests, prefer TPROC-C instead of TPROC-H:
+For Azure SQL Database:
 
 ```bash
 export AZURE_SQL_TPROC_C_DATABASE=tprocc
@@ -160,7 +169,7 @@ export AZURE_SQL_TPROC_C_DATABASE=tprocc
 
 After load, rerun the source validation. Fabric mirroring requires source-specific prerequisites; for relational benchmark tables, primary keys are required for the current PostgreSQL marker/table parity workflow.
 
-Create the CDC marker table after the HammerDB schema build. HammerDB requires an empty target database, so do not create the marker table before the TPROC-H build:
+Create the CDC marker table after the HammerDB schema build. HammerDB requires an empty target database, so do not create the marker table before the TPROC-C build:
 
 ```bash
 psql "host=$POSTGRES_HOST port=5432 dbname=$POSTGRES_DATABASE user=$POSTGRES_ADMIN_USER sslmode=require" \
@@ -168,12 +177,11 @@ psql "host=$POSTGRES_HOST port=5432 dbname=$POSTGRES_DATABASE user=$POSTGRES_ADM
   -f scripts/provision/setup-cdc-marker.sql
 ```
 
-For Azure SQL Database, use:
+For Azure SQL Database, create the marker table in the `tprocc` database:
 
 ```bash
-sqlcmd -C -S "$AZURE_SQL_HOST" -d "$AZURE_SQL_DATABASE" \
-  -U "$AZURE_SQL_ADMIN_USER" -P "$AZURE_SQL_ADMIN_PASSWORD" \
-  -i scripts/provision/setup-azure-sql-cdc-marker.sql
+python3 -m pip install pyodbc
+python3 scripts/provision/setup-azure-sql-cdc-marker-msi.py
 ```
 
 ## 6. Set up Fabric mirroring
@@ -183,15 +191,15 @@ export FABRIC_CAPACITY_ID="<deployment-output>"
 scripts/provision/setup-fabric-items.py
 ```
 
-Create the mirrored database item for Azure Database for PostgreSQL through one of these supported paths:
+Create the mirrored database item for the selected source through one of these supported paths:
 
 - Fabric portal mirroring experience.
 - Fabric Mirroring REST API: <https://learn.microsoft.com/fabric/mirroring/mirrored-database-rest-api>
 - fabric-cli item commands: <https://microsoft.github.io/fabric-cli/examples/item_examples/#startstop-mirrored-databases>
 
-Select the TPROC-H tables and `public.fabric_cdc_latency_marker`.
+Select the TPROC-C tables and `public.fabric_cdc_latency_marker`.
 
-For Azure SQL Database, create a mirrored Azure SQL Database item and either mirror all data or select the `dbo` TPROC-H tables plus `dbo.fabric_cdc_latency_marker`. The source connection can use Basic authentication with the prepared Fabric SQL login, or another supported Fabric authentication method.
+For Azure SQL Database, create a mirrored Azure SQL Database item and either mirror all data or select the `dbo` TPROC-C tables plus `dbo.fabric_cdc_latency_marker`. The source connection can use Basic authentication with the prepared Fabric SQL login, or another supported Fabric authentication method.
 In Entra-only deployments, use Organization Account, service principal, or workspace identity instead of Basic authentication.
 
 For the live Azure SQL validation environment:
@@ -201,8 +209,8 @@ For the live Azure SQL validation environment:
 | Fabric workspace | `fsqlmb-benchmark` |
 | Workspace ID | `ab29dc78-79f1-48ff-bcdd-7df991904572` |
 | Azure SQL server | `sql-fsqlmb-53vwnrvnudnko.database.windows.net` |
-| Azure SQL database | `tpch` |
-| Tables | `dbo.region`, `dbo.nation`, `dbo.supplier`, `dbo.customer`, `dbo.part`, `dbo.partsupp`, `dbo.orders`, `dbo.lineitem`, `dbo.fabric_cdc_latency_marker` |
+| Azure SQL database | `tprocc` |
+| Tables | `dbo.warehouse`, `dbo.district`, `dbo.customer`, `dbo.history`, `dbo.orders`, `dbo.new_order`, `dbo.order_line`, `dbo.stock`, `dbo.item`, `dbo.fabric_cdc_latency_marker` |
 
 The REST API has two relevant operation groups:
 
@@ -241,17 +249,17 @@ python3 scripts/benchmark/measure-initial-sync.py \
   --source-type azure-sql-db \
   --source-sqlcmd-args "$AZURE_SQL_SQLCMD_ARGS" \
   --fabric-sqlcmd-args "$FABRIC_SQLCMD_ARGS" \
-  --tables "dbo.region,dbo.nation,dbo.supplier,dbo.customer,dbo.part,dbo.partsupp,dbo.orders,dbo.lineitem,dbo.fabric_cdc_latency_marker"
+  --tables "dbo.warehouse,dbo.district,dbo.customer,dbo.history,dbo.orders,dbo.new_order,dbo.order_line,dbo.stock,dbo.item,dbo.fabric_cdc_latency_marker"
 ```
 
 Store raw observations under `results/`.
 
 ## 8. Measure CDC latency
 
-Run optional source load:
+Run source load:
 
 ```bash
-"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-run-tproch.tcl
+"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-run-tprocc.tcl
 ```
 
 For Azure SQL Database:
@@ -259,7 +267,7 @@ For Azure SQL Database:
 ```bash
 export AZURE_SQL_AUTH_MODE=entra
 export AZURE_SQL_MSI_OBJECT_ID="<benchmark-vm-managed-identity-object-id>"
-"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-run-sqlserver-tproch.tcl
+"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-run-sqlserver-tprocc.tcl
 ```
 
 Then run controlled marker measurement:
@@ -337,55 +345,7 @@ python3 scripts/benchmark/capture-fabric-mirroring-status.py \
   --output results/fabric-mirroring-status.json
 ```
 
-Check whether expected schema changes are visible in the Fabric SQL endpoint:
-
-```bash
-python3 scripts/benchmark/check-fabric-table-schema.py \
-  --server "$FABRIC_ODBC_SERVER" \
-  --database "$FABRIC_DATABASE" \
-  --schema _public \
-  --table lineitem \
-  --columns mirror_benchmark_update_batch,mirror_benchmark_update_ts
-```
-
-## 9. Measure large-table update impact
-
-HammerDB TPROC-H queries reference the standard TPC-H columns. Adding nullable benchmark-only columns to `lineitem` is safe for the benchmark flow because it does not change existing column names or query semantics. Apply this after the HammerDB build:
-
-```bash
-psql "$POSTGRES_PSQL_CONN" \
-  -v ON_ERROR_STOP=1 \
-  -f scripts/provision/setup-lineitem-bulk-update.sql
-```
-
-Wait until the new columns are visible through the Fabric SQL endpoint, then run a controlled large-table update. Start with 100K rows before attempting 1M rows or the full `lineitem` table:
-
-If the benchmark columns do not appear in Fabric after the PostgreSQL schema change, refresh the table in the Fabric mirroring configuration. In one validation run, Fabric did not automatically pick up the new `lineitem` columns; the table had to be removed from the mirrored table list and then added again. Treat this as an observation to confirm with the Fabric product team before publishing externally. A follow-up small-table test on `region` did pick up two new nullable columns automatically after about one minute, so this behavior might depend on table size, table state, or mirroring refresh timing. After re-adding a table, wait for `getTablesMirroringStatus` to move it from `Initialized` to `Replicating` and for `processedRows` to increase before running the bulk-update measurement.
-
-```bash
-python3 scripts/benchmark/run-lineitem-bulk-update.py \
-  --pg-conn "$POSTGRES_PSQL_CONN" \
-  --rows 100000 \
-  --batches 1 \
-  --fabric-sqlcmd-args "$FABRIC_SQLCMD_ARGS" \
-  --fabric-lineitem-table "$FABRIC_LINEITEM_TABLE"
-```
-
-The output CSV records source update timestamps, Fabric visibility time, latency from first and last updated row, and sample `l_orderkey`/`l_linenumber` values for time-travel validation.
-
-Use Fabric Warehouse time travel to compare before and after values for the sampled row. See `scripts/analysis/fabric-time-travel-lineitem.sql` and replace the placeholders with values from the CSV:
-
-```sql
-SELECT l_orderkey, l_linenumber, mirror_benchmark_update_batch, mirror_benchmark_update_ts
-FROM [_public].[lineitem]
-WHERE l_orderkey = <l_orderkey>
-  AND l_linenumber = <l_linenumber>
-OPTION (FOR TIMESTAMP AS OF '<before_timestamp_utc>');
-```
-
-To measure Delta/OneLake storage impact, run the Fabric Spark notebook template in `notebooks/fabric-delta-storage-inspection.py` before and after the bulk update. Capture data-file bytes, `_delta_log` bytes, Delta history, and table row counts.
-
-## 10. Summarize results
+## 9. Summarize results
 
 ```bash
 python3 scripts/analysis/summarize-results.py \
@@ -393,7 +353,7 @@ python3 scripts/analysis/summarize-results.py \
   --output results/summary.json
 ```
 
-## 11. Cleanup
+## 10. Cleanup
 
 Stop/delete Fabric mirroring first, then verify/drop orphaned replication slots in PostgreSQL. Only then delete Azure resources:
 
@@ -401,7 +361,7 @@ Stop/delete Fabric mirroring first, then verify/drop orphaned replication slots 
 scripts/provision/teardown-azure.sh
 ```
 
-## 12. Blog post
+## 11. Blog post
 
 Before writing the blog, confirm the **Deploy to Azure** button has been tested from the published repo and the Azure deployment succeeds. Write the blog only after both the agent and user have tested every repo step successfully with live Azure and Fabric resources.
 
@@ -410,21 +370,3 @@ Include this short activity split in the blog:
 | AI agent activity | Human activity |
 |---|---|
 | Deploy Azure infrastructure, configure PostgreSQL prerequisites, run HammerDB load, collect metrics, summarize results | Complete Fabric portal connection/mirroring permission prompts, review results, approve final blog |
-
-## 13. TPROC-C follow-up
-
-Use `docs/tproc-c-plan.md` for the next write-heavy benchmark design. The recommended model is to run HammerDB TPROC-C for realistic transactional pressure while keeping marker-table batches as the precise latency probe.
-
-Prepared scripts:
-
-```bash
-export TPROC_C_DATABASE=tprocc
-export TPROC_C_USER=tprocc
-export TPROC_C_PASSWORD="<benchmark-user-password>"
-
-"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-build-tprocc.tcl
-"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-check-tprocc.tcl
-"${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-run-tprocc.tcl
-```
-
-Run TPROC-C in a separate PostgreSQL database, then configure Fabric mirroring for that database before collecting CDC results under load.

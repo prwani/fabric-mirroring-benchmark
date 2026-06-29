@@ -5,7 +5,7 @@ param token string
 param adminUser string
 @secure()
 param adminPassword string
-param databaseName string = 'tpch'
+param databaseName string = 'tprocc'
 param version string = '8.0.21'
 param skuName string = 'Standard_D2ds_v4'
 @minValue(32)
@@ -78,4 +78,3 @@ resource allowBenchmarkVm 'Microsoft.DBforMySQL/flexibleServers/firewallRules@20
 output serverName string = server.name
 output fullyQualifiedDomainName string = server.properties.fullyQualifiedDomainName
 output databaseName string = database.name
-

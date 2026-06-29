@@ -21,7 +21,7 @@ def run_command(command: str) -> str:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--server", default=os.environ.get("FABRIC_ODBC_SERVER"), required=os.environ.get("FABRIC_ODBC_SERVER") is None)
-    parser.add_argument("--database", default=os.environ.get("FABRIC_DATABASE", "tpch"))
+    parser.add_argument("--database", default=os.environ.get("FABRIC_DATABASE", "tprocc"))
     parser.add_argument("--schema", required=True)
     parser.add_argument("--table", required=True)
     parser.add_argument("--columns", required=True, help="Comma-separated expected column names.")

@@ -11,12 +11,13 @@ Status: implemented and live deployment validated.
 
 ## HammerDB workload
 
-Use the shared PostgreSQL HammerDB scripts:
+Use the PostgreSQL HammerDB TPROC-C scripts:
 
-- `scripts/benchmark/hammerdb-build-tproch.tcl`
-- `scripts/benchmark/hammerdb-run-tproch.tcl`
+- `scripts/benchmark/hammerdb-build-tprocc.tcl`
+- `scripts/benchmark/hammerdb-check-tprocc.tcl`
+- `scripts/benchmark/hammerdb-run-tprocc.tcl`
 
-Default initial load scale factor is `TPROC_H_SCALE_FACTOR=1`.
+Default initial load size is `TPROC_C_WAREHOUSES=10`. This creates transactional OLTP-shaped tables and supports a sustained write workload for CDC latency measurements.
 
 ## Fabric mirroring tutorial
 
@@ -25,4 +26,3 @@ Default initial load scale factor is `TPROC_H_SCALE_FACTOR=1`.
 ## Notes
 
 The template configures `wal_level=logical`, replication slots/senders, system-assigned managed identity, firewall access for Azure services, and firewall access from the benchmark VM.
-
