@@ -5,7 +5,7 @@ Status: infrastructure adapter implemented; live deployment and Fabric mirroring
 ## Azure resource
 
 - Azure SQL logical server
-- Azure SQL Database using vCore General Purpose (`GP_Gen5_2` by default)
+- Azure SQL Database using vCore General Purpose (`GP_Gen5_4` by default)
 - Source type: `azure-sql-db`
 - Microsoft Entra-only authentication by default for policy-compliant deployments
 - Optional SQL authentication administrator only when `AZURE_SQL_AAD_ONLY_AUTH=false` and the tenant policy allows it

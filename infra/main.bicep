@@ -114,7 +114,7 @@ param azureSqlAdminPassword string = ''
 param azureSqlAzureAdOnlyAuthentication bool = true
 
 @description('Azure SQL Database SKU name. Used when sourceType=azure-sql-db.')
-param azureSqlSkuName string = 'GP_Gen5_2'
+param azureSqlSkuName string = 'GP_Gen5_4'
 
 @description('Azure SQL Database SKU tier. Used when sourceType=azure-sql-db.')
 param azureSqlSkuTier string = 'GeneralPurpose'
@@ -123,7 +123,7 @@ param azureSqlSkuTier string = 'GeneralPurpose'
 param azureSqlSkuFamily string = 'Gen5'
 
 @description('Azure SQL Database vCore capacity. Used when sourceType=azure-sql-db.')
-param azureSqlSkuCapacity int = 2
+param azureSqlSkuCapacity int = 4
 
 @description('Azure SQL Database maximum size in bytes. Defaults to 32 GiB. Used when sourceType=azure-sql-db.')
 param azureSqlMaxSizeBytes int = 34359738368

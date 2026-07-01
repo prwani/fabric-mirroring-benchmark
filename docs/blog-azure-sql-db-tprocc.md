@@ -43,7 +43,7 @@ HammerDB VM
 |---|---|
 | Source system | Azure SQL Database |
 | Database name | `tprocc` |
-| Azure SQL default SKU | `GP_Gen5_2`; the final validation build was run after scaling to `GP_Gen5_4` |
+| Azure SQL default SKU | `GP_Gen5_4` |
 | Fabric capacity SKU | `F8` |
 | Workload | HammerDB TPROC-C |
 | TPROC-C scale | 10 warehouses |

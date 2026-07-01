@@ -11,10 +11,10 @@ param entraAdminObjectId string = ''
 param azureAdOnlyAuthentication bool = true
 param allowedBenchmarkIp string
 param allowedOperatorIp string = ''
-param skuName string = 'GP_Gen5_2'
+param skuName string = 'GP_Gen5_4'
 param skuTier string = 'GeneralPurpose'
 param skuFamily string = 'Gen5'
-param skuCapacity int = 2
+param skuCapacity int = 4
 param maxSizeBytes int = 34359738368
 
 var serverName = 'sql-${projectName}-${token}'

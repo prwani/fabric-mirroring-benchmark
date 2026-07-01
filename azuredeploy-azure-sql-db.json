@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "8269566352070435368"
+      "templateHash": "12968223621799217955"
     }
   },
   "parameters": {
@@ -96,7 +96,7 @@
     },
     "azureSqlSkuName": {
       "type": "string",
-      "defaultValue": "GP_Gen5_2",
+      "defaultValue": "GP_Gen5_4",
       "metadata": {
         "description": "Azure SQL Database SKU name."
       }
@@ -117,7 +117,7 @@
     },
     "azureSqlSkuCapacity": {
       "type": "int",
-      "defaultValue": 2,
+      "defaultValue": 4,
       "metadata": {
         "description": "Azure SQL Database vCore capacity."
       }
@@ -466,7 +466,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "15683357686713320041"
+              "templateHash": "15479147281395677725"
             }
           },
           "parameters": {
@@ -514,7 +514,7 @@
             },
             "skuName": {
               "type": "string",
-              "defaultValue": "GP_Gen5_2"
+              "defaultValue": "GP_Gen5_4"
             },
             "skuTier": {
               "type": "string",
@@ -526,7 +526,7 @@
             },
             "skuCapacity": {
               "type": "int",
-              "defaultValue": 2
+              "defaultValue": 4
             },
             "maxSizeBytes": {
               "type": "int",

@@ -80,10 +80,10 @@ az deployment group create \
     azureSqlAdminUser="${AZURE_SQL_ADMIN_USER:-sqladmin}" \
     azureSqlAdminPassword="${AZURE_SQL_ADMIN_PASSWORD:-}" \
     azureSqlAzureAdOnlyAuthentication="${AZURE_SQL_AAD_ONLY_AUTH:-true}" \
-    azureSqlSkuName="${AZURE_SQL_SKU_NAME:-GP_Gen5_2}" \
+    azureSqlSkuName="${AZURE_SQL_SKU_NAME:-GP_Gen5_4}" \
     azureSqlSkuTier="${AZURE_SQL_SKU_TIER:-GeneralPurpose}" \
     azureSqlSkuFamily="${AZURE_SQL_SKU_FAMILY:-Gen5}" \
-    azureSqlSkuCapacity="${AZURE_SQL_SKU_CAPACITY:-2}" \
+    azureSqlSkuCapacity="${AZURE_SQL_SKU_CAPACITY:-4}" \
     azureSqlMaxSizeBytes="${AZURE_SQL_MAX_SIZE_BYTES:-34359738368}" \
     sqlServerVmAdminUsername="${SQL_SERVER_VM_ADMIN_USERNAME:-azureuser}" \
     sqlServerVmAdminPassword="${SQL_SERVER_VM_ADMIN_PASSWORD:-}" \
