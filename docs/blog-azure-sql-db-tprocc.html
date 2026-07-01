@@ -31,17 +31,14 @@
   <tbody>
     <tr><td>Azure subscription</td><td>Permission to deploy a resource group, Azure SQL Database, VM, Fabric capacity, networking, firewall rules, and monitoring resources.</td></tr>
     <tr><td>Microsoft Fabric tenant</td><td>Permission to create a workspace, assign Fabric capacity, and create mirrored database items.</td></tr>
-    <tr><td>Azure SQL supported tier</td><td>This validation used Azure SQL Database vCore General Purpose.</td></tr>
-    <tr><td>Fabric account</td><td>This run used <strong>Organizational account</strong> authentication for the Azure SQL mirrored database connection.</td></tr>
-    <tr><td>Benchmark VM managed identity</td><td>Used by HammerDB to connect to Azure SQL in an Entra-only tenant.</td></tr>
+    <tr><td>Fabric account</td><td>An account that can create the mirrored database connection. This run used <strong>Organizational account</strong> authentication.</td></tr>
+    <tr><td>Azure SQL Entra admin principal</td><td>UPN and object ID for the principal that will be configured as the Azure SQL Microsoft Entra administrator.</td></tr>
     <tr><td>Admin SSH public key</td><td>Required by the Deploy to Azure form for the benchmark VM. Generate an SSH key pair and paste the public key value, for example the contents of <code>~/.ssh/id_rsa.pub</code> or <code>~/.ssh/id_ed25519.pub</code>. See <a href="https://learn.microsoft.com/en-us/azure/virtual-machines/ssh-keys-portal">Create and use an SSH public-private key pair for Linux VMs in Azure</a>.</td></tr>
     <tr><td>Operator public IP</td><td>Required by the Deploy to Azure form to restrict SSH access to your current machine. Use your public IPv4 address in CIDR form, for example <code>203.0.113.10/32</code>. From a terminal, <code>curl -4 ifconfig.me</code> can show the IP; append <code>/32</code> for a single-address rule.</td></tr>
-    <tr><td>HammerDB</td><td>HammerDB 5.0 was used for the SQL Server TPROC-C workload.</td></tr>
-    <tr><td>SQL tools</td><td><code>sqlcmd</code> and the SQL Server ODBC driver are required on the benchmark VM.</td></tr>
   </tbody>
 </table>
 
-<p><strong>Validated environment</strong></p>
+<h2>Default benchmark setup</h2>
 
 <table>
   <thead>
@@ -51,16 +48,14 @@
     </tr>
   </thead>
   <tbody>
-    <tr><td>Region</td><td><code>swedencentral</code></td></tr>
-    <tr><td>Azure SQL server</td><td><code>sql-fsqlmb-53vwnrvnudnko.database.windows.net</code></td></tr>
-    <tr><td>Database</td><td><code>tprocc</code></td></tr>
-    <tr><td>Azure SQL SKU during final build</td><td><code>GP_Gen5_4</code></td></tr>
+    <tr><td>Source system</td><td>Azure SQL Database</td></tr>
+    <tr><td>Database name</td><td><code>tprocc</code></td></tr>
+    <tr><td>Azure SQL default SKU</td><td><code>GP_Gen5_2</code>; the final validation build was run after scaling to <code>GP_Gen5_4</code></td></tr>
+    <tr><td>Fabric capacity SKU</td><td><code>F8</code></td></tr>
     <tr><td>Workload</td><td>HammerDB TPROC-C</td></tr>
     <tr><td>TPROC-C scale</td><td>10 warehouses</td></tr>
     <tr><td>Build virtual users</td><td>4</td></tr>
-    <tr><td>Fabric workspace</td><td><code>fsqlmb-benchmark</code></td></tr>
-    <tr><td>Mirrored database item</td><td><code>tprocc</code></td></tr>
-    <tr><td>Mirroring option</td><td>Add any new tables to replication enabled</td></tr>
+    <tr><td>Mirroring option for new-table scenario</td><td>Add any new tables to replication enabled</td></tr>
   </tbody>
 </table>
 
@@ -90,7 +85,11 @@
   </tbody>
 </table>
 
-<p>The template deploys only the Azure SQL Database source, benchmark VM, Fabric capacity, networking, firewall rules, and monitoring. Fabric mirrored database setup remains an interactive Fabric step because authentication prompts and tenant permissions vary.</p>
+<p>The template deploys only the Azure SQL Database source, benchmark VM, Fabric capacity, networking, firewall rules, and monitoring. The benchmark VM is provisioned with a system-assigned managed identity; later steps use that identity for HammerDB-to-Azure-SQL authentication in Entra-only tenants.</p>
+
+<p>HammerDB, <code>sqlcmd</code>, and the SQL Server ODBC driver are runtime tools used on the benchmark VM after deployment. They are not prerequisites for the reader's local machine.</p>
+
+<p>Fabric mirrored database setup remains an interactive Fabric step because authentication prompts and tenant permissions vary.</p>
 
 <p>The repository still keeps the original all-source <code>azuredeploy.json</code> for advanced use, but Azure Portal custom deployment does not hide unrelated parameters in a single conditional ARM template. Use the source-specific template for a cleaner portal experience.</p>
 
