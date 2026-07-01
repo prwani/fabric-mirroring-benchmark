@@ -35,6 +35,8 @@ HammerDB VM
 | Azure SQL supported tier | This validation used Azure SQL Database vCore General Purpose. |
 | Fabric account | This run used **Organizational account** authentication for the Azure SQL mirrored database connection. |
 | Benchmark VM managed identity | Used by HammerDB to connect to Azure SQL in an Entra-only tenant. |
+| Admin SSH public key | Required by the Deploy to Azure form for the benchmark VM. Generate an SSH key pair and paste the public key value, for example the contents of `~/.ssh/id_rsa.pub` or `~/.ssh/id_ed25519.pub`. See [Create and use an SSH public-private key pair for Linux VMs in Azure](https://learn.microsoft.com/en-us/azure/virtual-machines/ssh-keys-portal). |
+| Operator public IP | Required by the Deploy to Azure form to restrict SSH access to your current machine. Use your public IPv4 address in CIDR form, for example `203.0.113.10/32`. From a terminal, `curl -4 ifconfig.me` can show the IP; append `/32` for a single-address rule. |
 | HammerDB | HammerDB 5.0 was used for the SQL Server TPROC-C workload. |
 | SQL tools | `sqlcmd` and the SQL Server ODBC driver are required on the benchmark VM. |
 
@@ -57,22 +59,25 @@ Validated environment:
 
 ### 1. Deploy Azure resources
 
-The easiest deployment path is the **Deploy to Azure** button. It uses the repository's `azuredeploy.json` ARM template and opens the Azure Portal custom deployment experience:
+The easiest deployment path is the Azure SQL-specific **Deploy to Azure** button. It uses `azuredeploy-azure-sql-db.json`, so the Azure Portal form only asks for Azure SQL Database, benchmark VM, Fabric capacity, and shared deployment values:
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fprwani%2Ffabric-mirroring-benchmark%2Fmain%2Fazuredeploy.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fprwani%2Ffabric-mirroring-benchmark%2Fmain%2Fazuredeploy-azure-sql-db.json)
 
 Set these important parameters:
 
 | Parameter | Value |
 |---|---|
-| `sourceType` | `azure-sql-db` |
 | `location` | `swedencentral`, or another region where Azure SQL Database, VM, and Fabric capacity are available |
+| `adminSshPublicKey` | Your SSH public key, such as the contents of `~/.ssh/id_ed25519.pub` |
+| `operatorPublicIp` | Your public IPv4 address with `/32`, such as `203.0.113.10/32` |
 | `azureSqlDatabaseName` | `tprocc` |
 | `azureSqlAzureAdOnlyAuthentication` | `true` for Entra-only tenants |
 | `sqlEntraAdminLogin` / `sqlEntraAdminObjectId` | The Entra admin principal for the Azure SQL server |
 | `fabricCapacitySku` | `F8` for the baseline run |
 
-The template deploys the Azure resources: Azure SQL Database, benchmark VM, Fabric capacity, networking, firewall rules, and monitoring. Fabric mirrored database setup remains an interactive Fabric step because authentication prompts and tenant permissions vary.
+The template deploys only the Azure SQL Database source, benchmark VM, Fabric capacity, networking, firewall rules, and monitoring. Fabric mirrored database setup remains an interactive Fabric step because authentication prompts and tenant permissions vary.
+
+The repository still keeps the original all-source `azuredeploy.json` for advanced use, but Azure Portal custom deployment does not hide unrelated parameters in a single conditional ARM template. Use the source-specific template for a cleaner portal experience.
 
 If you prefer a terminal-driven setup, or you are using an AI agent to run the deployment, use the CLI script path:
 

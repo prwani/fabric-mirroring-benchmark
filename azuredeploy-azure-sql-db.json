@@ -1,0 +1,996 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.39.26.7824",
+      "templateHash": "8269566352070435368"
+    }
+  },
+  "parameters": {
+    "projectName": {
+      "type": "string",
+      "defaultValue": "fsqlmb",
+      "minLength": 2,
+      "maxLength": 10,
+      "metadata": {
+        "description": "Short project prefix used in resource names."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "swedencentral",
+      "metadata": {
+        "description": "Azure region. Defaults to Sweden Central but is configurable for other regions."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {
+        "workload": "fabric-mirroring-benchmark",
+        "source": "azure-sql-db"
+      },
+      "metadata": {
+        "description": "Tags applied to all resources."
+      }
+    },
+    "adminUsername": {
+      "type": "string",
+      "defaultValue": "azureuser",
+      "metadata": {
+        "description": "Benchmark VM admin username."
+      }
+    },
+    "adminSshPublicKey": {
+      "type": "string",
+      "metadata": {
+        "description": "SSH public key for benchmark VM access. Generate one with ssh-keygen and paste the .pub file content."
+      }
+    },
+    "operatorPublicIp": {
+      "type": "string",
+      "metadata": {
+        "description": "Operator public IP CIDR allowed to SSH to the benchmark VM, e.g. 203.0.113.10/32."
+      }
+    },
+    "sqlEntraAdminLogin": {
+      "type": "string",
+      "metadata": {
+        "description": "Entra administrator login name for the Azure SQL logical server."
+      }
+    },
+    "sqlEntraAdminObjectId": {
+      "type": "string",
+      "metadata": {
+        "description": "Entra administrator object ID for the Azure SQL logical server."
+      }
+    },
+    "azureSqlDatabaseName": {
+      "type": "string",
+      "defaultValue": "tprocc",
+      "metadata": {
+        "description": "Azure SQL Database name."
+      }
+    },
+    "azureSqlAdminUser": {
+      "type": "string",
+      "defaultValue": "sqladmin",
+      "metadata": {
+        "description": "Azure SQL logical server SQL authentication administrator login. Used only when azureSqlAzureAdOnlyAuthentication is false."
+      }
+    },
+    "azureSqlAdminPassword": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Azure SQL logical server SQL authentication administrator password. Leave empty when azureSqlAzureAdOnlyAuthentication is true."
+      }
+    },
+    "azureSqlAzureAdOnlyAuthentication": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Require Microsoft Entra-only authentication for Azure SQL Database. Keep true for Entra-only tenants."
+      }
+    },
+    "azureSqlSkuName": {
+      "type": "string",
+      "defaultValue": "GP_Gen5_2",
+      "metadata": {
+        "description": "Azure SQL Database SKU name."
+      }
+    },
+    "azureSqlSkuTier": {
+      "type": "string",
+      "defaultValue": "GeneralPurpose",
+      "metadata": {
+        "description": "Azure SQL Database SKU tier."
+      }
+    },
+    "azureSqlSkuFamily": {
+      "type": "string",
+      "defaultValue": "Gen5",
+      "metadata": {
+        "description": "Azure SQL Database SKU family."
+      }
+    },
+    "azureSqlSkuCapacity": {
+      "type": "int",
+      "defaultValue": 2,
+      "metadata": {
+        "description": "Azure SQL Database vCore capacity."
+      }
+    },
+    "azureSqlMaxSizeBytes": {
+      "type": "int",
+      "defaultValue": 34359738368,
+      "metadata": {
+        "description": "Azure SQL Database maximum size in bytes. Defaults to 32 GiB."
+      }
+    },
+    "fabricCapacitySku": {
+      "type": "string",
+      "defaultValue": "F8",
+      "allowedValues": [
+        "F2",
+        "F4",
+        "F8",
+        "F16",
+        "F32",
+        "F64"
+      ],
+      "metadata": {
+        "description": "Fabric capacity SKU for the benchmark."
+      }
+    },
+    "fabricAdminUpn": {
+      "type": "string",
+      "metadata": {
+        "description": "UPN of the Fabric capacity administrator."
+      }
+    }
+  },
+  "variables": {
+    "token": "[toLower(uniqueString(subscription().id, resourceGroup().id, parameters('projectName'), parameters('location')))]",
+    "operatorSqlFirewallIp": "[replace(parameters('operatorPublicIp'), '/32', '')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('network-{0}', variables('token'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "projectName": {
+            "value": "[parameters('projectName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          },
+          "operatorPublicIp": {
+            "value": "[parameters('operatorPublicIp')]"
+          },
+          "token": {
+            "value": "[variables('token')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.39.26.7824",
+              "templateHash": "17744038669688139004"
+            }
+          },
+          "parameters": {
+            "projectName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            },
+            "token": {
+              "type": "string"
+            },
+            "operatorPublicIp": {
+              "type": "string"
+            }
+          },
+          "variables": {
+            "vnetName": "[format('vnet-{0}-{1}', parameters('projectName'), parameters('token'))]",
+            "nsgName": "[format('nsg-{0}-{1}', parameters('projectName'), parameters('token'))]",
+            "publicIpName": "[format('pip-{0}-{1}', parameters('projectName'), parameters('token'))]",
+            "vmSubnetName": "snet-vm",
+            "sqlMiSubnetName": "snet-sqlmi"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/networkSecurityGroups",
+              "apiVersion": "2024-07-01",
+              "name": "[variables('nsgName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "securityRules": [
+                  {
+                    "name": "AllowSshFromOperator",
+                    "properties": {
+                      "priority": 100,
+                      "direction": "Inbound",
+                      "access": "Allow",
+                      "protocol": "Tcp",
+                      "sourcePortRange": "*",
+                      "destinationPortRange": "22",
+                      "sourceAddressPrefix": "[parameters('operatorPublicIp')]",
+                      "destinationAddressPrefix": "*"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Network/publicIPAddresses",
+              "apiVersion": "2024-07-01",
+              "name": "[variables('publicIpName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Standard"
+              },
+              "properties": {
+                "publicIPAllocationMethod": "Static"
+              }
+            },
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2024-07-01",
+              "name": "[variables('vnetName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "10.42.0.0/16"
+                  ]
+                },
+                "subnets": [
+                  {
+                    "name": "[variables('vmSubnetName')]",
+                    "properties": {
+                      "addressPrefix": "10.42.1.0/24",
+                      "networkSecurityGroup": {
+                        "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+                      }
+                    }
+                  },
+                  {
+                    "name": "[variables('sqlMiSubnetName')]",
+                    "properties": {
+                      "addressPrefix": "10.42.2.0/24",
+                      "delegations": [
+                        {
+                          "name": "managedInstanceDelegation",
+                          "properties": {
+                            "serviceName": "Microsoft.Sql/managedInstances"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "vmSubnetId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')), '2024-07-01').subnets[0].id]"
+            },
+            "sqlMiSubnetId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')), '2024-07-01').subnets[1].id]"
+            },
+            "publicIpId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]"
+            },
+            "publicIpName": {
+              "type": "string",
+              "value": "[variables('publicIpName')]"
+            },
+            "publicIpAddress": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName')), '2024-07-01').ipAddress]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('monitoring-{0}', variables('token'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "projectName": {
+            "value": "[parameters('projectName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          },
+          "token": {
+            "value": "[variables('token')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.39.26.7824",
+              "templateHash": "6424256095076795099"
+            }
+          },
+          "parameters": {
+            "projectName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            },
+            "token": {
+              "type": "string"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces",
+              "apiVersion": "2025-02-01",
+              "name": "[format('log-{0}-{1}', parameters('projectName'), parameters('token'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "sku": {
+                  "name": "PerGB2018"
+                },
+                "retentionInDays": 30
+              }
+            }
+          ],
+          "outputs": {
+            "workspaceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.OperationalInsights/workspaces', format('log-{0}-{1}', parameters('projectName'), parameters('token')))]"
+            },
+            "workspaceCustomerId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', format('log-{0}-{1}', parameters('projectName'), parameters('token'))), '2025-02-01').customerId]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('azure-sql-db-{0}', variables('token'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "projectName": {
+            "value": "[parameters('projectName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          },
+          "token": {
+            "value": "[variables('token')]"
+          },
+          "databaseName": {
+            "value": "[parameters('azureSqlDatabaseName')]"
+          },
+          "adminLogin": {
+            "value": "[parameters('azureSqlAdminUser')]"
+          },
+          "adminPassword": {
+            "value": "[parameters('azureSqlAdminPassword')]"
+          },
+          "entraAdminLogin": {
+            "value": "[parameters('sqlEntraAdminLogin')]"
+          },
+          "entraAdminObjectId": {
+            "value": "[parameters('sqlEntraAdminObjectId')]"
+          },
+          "azureAdOnlyAuthentication": {
+            "value": "[parameters('azureSqlAzureAdOnlyAuthentication')]"
+          },
+          "allowedBenchmarkIp": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('network-{0}', variables('token'))), '2025-04-01').outputs.publicIpAddress.value]"
+          },
+          "allowedOperatorIp": {
+            "value": "[variables('operatorSqlFirewallIp')]"
+          },
+          "skuName": {
+            "value": "[parameters('azureSqlSkuName')]"
+          },
+          "skuTier": {
+            "value": "[parameters('azureSqlSkuTier')]"
+          },
+          "skuFamily": {
+            "value": "[parameters('azureSqlSkuFamily')]"
+          },
+          "skuCapacity": {
+            "value": "[parameters('azureSqlSkuCapacity')]"
+          },
+          "maxSizeBytes": {
+            "value": "[parameters('azureSqlMaxSizeBytes')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.39.26.7824",
+              "templateHash": "15683357686713320041"
+            }
+          },
+          "parameters": {
+            "projectName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            },
+            "token": {
+              "type": "string"
+            },
+            "databaseName": {
+              "type": "string",
+              "defaultValue": "tprocc"
+            },
+            "adminLogin": {
+              "type": "string",
+              "defaultValue": "sqladmin"
+            },
+            "adminPassword": {
+              "type": "securestring"
+            },
+            "entraAdminLogin": {
+              "type": "string",
+              "defaultValue": ""
+            },
+            "entraAdminObjectId": {
+              "type": "string",
+              "defaultValue": ""
+            },
+            "azureAdOnlyAuthentication": {
+              "type": "bool",
+              "defaultValue": true
+            },
+            "allowedBenchmarkIp": {
+              "type": "string"
+            },
+            "allowedOperatorIp": {
+              "type": "string",
+              "defaultValue": ""
+            },
+            "skuName": {
+              "type": "string",
+              "defaultValue": "GP_Gen5_2"
+            },
+            "skuTier": {
+              "type": "string",
+              "defaultValue": "GeneralPurpose"
+            },
+            "skuFamily": {
+              "type": "string",
+              "defaultValue": "Gen5"
+            },
+            "skuCapacity": {
+              "type": "int",
+              "defaultValue": 2
+            },
+            "maxSizeBytes": {
+              "type": "int",
+              "defaultValue": 34359738368
+            }
+          },
+          "variables": {
+            "serverName": "[format('sql-{0}-{1}', parameters('projectName'), parameters('token'))]",
+            "enableEntraAdmin": "[and(not(empty(parameters('entraAdminLogin'))), not(empty(parameters('entraAdminObjectId'))))]",
+            "enableSqlAdmin": "[not(parameters('azureAdOnlyAuthentication'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Sql/servers",
+              "apiVersion": "2023-08-01",
+              "name": "[variables('serverName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": "[union(union(createObject('publicNetworkAccess', 'Enabled', 'minimalTlsVersion', '1.2'), if(variables('enableSqlAdmin'), createObject('administratorLogin', parameters('adminLogin'), 'administratorLoginPassword', parameters('adminPassword')), createObject())), if(variables('enableEntraAdmin'), createObject('administrators', createObject('administratorType', 'ActiveDirectory', 'principalType', 'User', 'login', parameters('entraAdminLogin'), 'sid', parameters('entraAdminObjectId'), 'tenantId', tenant().tenantId, 'azureADOnlyAuthentication', parameters('azureAdOnlyAuthentication'))), createObject()))]"
+            },
+            {
+              "type": "Microsoft.Sql/servers/firewallRules",
+              "apiVersion": "2023-08-01",
+              "name": "[format('{0}/{1}', variables('serverName'), 'AllowAzureServices')]",
+              "properties": {
+                "startIpAddress": "0.0.0.0",
+                "endIpAddress": "0.0.0.0"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers', variables('serverName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Sql/servers/firewallRules",
+              "apiVersion": "2023-08-01",
+              "name": "[format('{0}/{1}', variables('serverName'), 'AllowBenchmarkVm')]",
+              "properties": {
+                "startIpAddress": "[parameters('allowedBenchmarkIp')]",
+                "endIpAddress": "[parameters('allowedBenchmarkIp')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers/firewallRules', variables('serverName'), 'AllowAzureServices')]",
+                "[resourceId('Microsoft.Sql/servers', variables('serverName'))]"
+              ]
+            },
+            {
+              "condition": "[not(empty(parameters('allowedOperatorIp')))]",
+              "type": "Microsoft.Sql/servers/firewallRules",
+              "apiVersion": "2023-08-01",
+              "name": "[format('{0}/{1}', variables('serverName'), 'AllowOperatorIp')]",
+              "properties": {
+                "startIpAddress": "[parameters('allowedOperatorIp')]",
+                "endIpAddress": "[parameters('allowedOperatorIp')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers/firewallRules', variables('serverName'), 'AllowBenchmarkVm')]",
+                "[resourceId('Microsoft.Sql/servers', variables('serverName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Sql/servers/databases",
+              "apiVersion": "2023-08-01",
+              "name": "[format('{0}/{1}', variables('serverName'), parameters('databaseName'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "[parameters('skuName')]",
+                "tier": "[parameters('skuTier')]",
+                "family": "[parameters('skuFamily')]",
+                "capacity": "[parameters('skuCapacity')]"
+              },
+              "properties": {
+                "maxSizeBytes": "[parameters('maxSizeBytes')]",
+                "zoneRedundant": false,
+                "readScale": "Disabled",
+                "requestedBackupStorageRedundancy": "Local"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers/firewallRules', variables('serverName'), 'AllowBenchmarkVm')]",
+                "[resourceId('Microsoft.Sql/servers/firewallRules', variables('serverName'), 'AllowOperatorIp')]",
+                "[resourceId('Microsoft.Sql/servers', variables('serverName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "serverName": {
+              "type": "string",
+              "value": "[variables('serverName')]"
+            },
+            "fullyQualifiedDomainName": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Sql/servers', variables('serverName')), '2023-08-01').fullyQualifiedDomainName]"
+            },
+            "databaseName": {
+              "type": "string",
+              "value": "[parameters('databaseName')]"
+            },
+            "principalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Sql/servers', variables('serverName')), '2023-08-01', 'full').identity.principalId]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('network-{0}', variables('token')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('benchmark-vm-{0}', variables('token'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "projectName": {
+            "value": "[parameters('projectName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          },
+          "token": {
+            "value": "[variables('token')]"
+          },
+          "adminUsername": {
+            "value": "[parameters('adminUsername')]"
+          },
+          "adminSshPublicKey": {
+            "value": "[parameters('adminSshPublicKey')]"
+          },
+          "subnetId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('network-{0}', variables('token'))), '2025-04-01').outputs.vmSubnetId.value]"
+          },
+          "publicIpId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('network-{0}', variables('token'))), '2025-04-01').outputs.publicIpId.value]"
+          },
+          "logAnalyticsWorkspaceId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('monitoring-{0}', variables('token'))), '2025-04-01').outputs.workspaceId.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.39.26.7824",
+              "templateHash": "5437046714511751672"
+            }
+          },
+          "parameters": {
+            "projectName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            },
+            "token": {
+              "type": "string"
+            },
+            "adminUsername": {
+              "type": "string"
+            },
+            "adminSshPublicKey": {
+              "type": "string"
+            },
+            "subnetId": {
+              "type": "string"
+            },
+            "publicIpId": {
+              "type": "string"
+            },
+            "logAnalyticsWorkspaceId": {
+              "type": "string"
+            }
+          },
+          "variables": {
+            "vmName": "[format('vm-{0}-{1}', parameters('projectName'), parameters('token'))]",
+            "nicName": "[format('nic-{0}-{1}', parameters('projectName'), parameters('token'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/networkInterfaces",
+              "apiVersion": "2024-07-01",
+              "name": "[variables('nicName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "ipConfigurations": [
+                  {
+                    "name": "ipconfig1",
+                    "properties": {
+                      "privateIPAllocationMethod": "Dynamic",
+                      "subnet": {
+                        "id": "[parameters('subnetId')]"
+                      },
+                      "publicIPAddress": {
+                        "id": "[parameters('publicIpId')]"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Compute/virtualMachines",
+              "apiVersion": "2024-11-01",
+              "name": "[variables('vmName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "hardwareProfile": {
+                  "vmSize": "Standard_D4s_v5"
+                },
+                "osProfile": {
+                  "computerName": "[variables('vmName')]",
+                  "adminUsername": "[parameters('adminUsername')]",
+                  "linuxConfiguration": {
+                    "disablePasswordAuthentication": true,
+                    "ssh": {
+                      "publicKeys": [
+                        {
+                          "path": "[format('/home/{0}/.ssh/authorized_keys', parameters('adminUsername'))]",
+                          "keyData": "[parameters('adminSshPublicKey')]"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "storageProfile": {
+                  "imageReference": {
+                    "publisher": "Canonical",
+                    "offer": "0001-com-ubuntu-server-jammy",
+                    "sku": "22_04-lts-gen2",
+                    "version": "latest"
+                  },
+                  "osDisk": {
+                    "createOption": "FromImage",
+                    "managedDisk": {
+                      "storageAccountType": "Premium_LRS"
+                    },
+                    "diskSizeGB": 128
+                  }
+                },
+                "networkProfile": {
+                  "networkInterfaces": [
+                    {
+                      "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
+                    }
+                  ]
+                },
+                "diagnosticsProfile": {
+                  "bootDiagnostics": {
+                    "enabled": true
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Compute/virtualMachines/extensions",
+              "apiVersion": "2024-11-01",
+              "name": "[format('{0}/{1}', variables('vmName'), 'AzureMonitorLinuxAgent')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "publisher": "Microsoft.Azure.Monitor",
+                "type": "AzureMonitorLinuxAgent",
+                "typeHandlerVersion": "1.0",
+                "autoUpgradeMinorVersion": true,
+                "enableAutomaticUpgrade": true
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "vmName": {
+              "type": "string",
+              "value": "[variables('vmName')]"
+            },
+            "publicIpAddress": {
+              "type": "string",
+              "value": "[reference(parameters('publicIpId'), '2024-07-01').ipAddress]"
+            },
+            "principalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Compute/virtualMachines', variables('vmName')), '2024-11-01', 'full').identity.principalId]"
+            },
+            "logAnalyticsWorkspaceId": {
+              "type": "string",
+              "value": "[parameters('logAnalyticsWorkspaceId')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('monitoring-{0}', variables('token')))]",
+        "[resourceId('Microsoft.Resources/deployments', format('network-{0}', variables('token')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('fabric-{0}', variables('token'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "projectName": {
+            "value": "[parameters('projectName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          },
+          "token": {
+            "value": "[variables('token')]"
+          },
+          "skuName": {
+            "value": "[parameters('fabricCapacitySku')]"
+          },
+          "adminUpn": {
+            "value": "[parameters('fabricAdminUpn')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.39.26.7824",
+              "templateHash": "4983059917866809196"
+            }
+          },
+          "parameters": {
+            "projectName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            },
+            "token": {
+              "type": "string"
+            },
+            "skuName": {
+              "type": "string",
+              "defaultValue": "F8",
+              "allowedValues": [
+                "F2",
+                "F4",
+                "F8",
+                "F16",
+                "F32",
+                "F64"
+              ]
+            },
+            "adminUpn": {
+              "type": "string"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Fabric/capacities",
+              "apiVersion": "2023-11-01",
+              "name": "[format('{0}fab{1}', parameters('projectName'), parameters('token'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "[parameters('skuName')]",
+                "tier": "Fabric"
+              },
+              "properties": {
+                "administration": {
+                  "members": [
+                    "[parameters('adminUpn')]"
+                  ]
+                }
+              }
+            }
+          ],
+          "outputs": {
+            "capacityId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Fabric/capacities', format('{0}fab{1}', parameters('projectName'), parameters('token')))]"
+            },
+            "capacityName": {
+              "type": "string",
+              "value": "[format('{0}fab{1}', parameters('projectName'), parameters('token'))]"
+            },
+            "capacitySku": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Fabric/capacities', format('{0}fab{1}', parameters('projectName'), parameters('token'))), '2023-11-01', 'full').sku.name]"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "sourceType": {
+      "type": "string",
+      "value": "azure-sql-db"
+    },
+    "azureSqlServerName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('azure-sql-db-{0}', variables('token'))), '2025-04-01').outputs.serverName.value]"
+    },
+    "azureSqlFullyQualifiedDomainName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('azure-sql-db-{0}', variables('token'))), '2025-04-01').outputs.fullyQualifiedDomainName.value]"
+    },
+    "azureSqlDatabaseName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('azure-sql-db-{0}', variables('token'))), '2025-04-01').outputs.databaseName.value]"
+    },
+    "azureSqlServerPrincipalId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('azure-sql-db-{0}', variables('token'))), '2025-04-01').outputs.principalId.value]"
+    },
+    "benchmarkVmName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('benchmark-vm-{0}', variables('token'))), '2025-04-01').outputs.vmName.value]"
+    },
+    "benchmarkVmPublicIp": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('benchmark-vm-{0}', variables('token'))), '2025-04-01').outputs.publicIpAddress.value]"
+    },
+    "fabricCapacityId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('fabric-{0}', variables('token'))), '2025-04-01').outputs.capacityId.value]"
+    },
+    "fabricCapacityName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('fabric-{0}', variables('token'))), '2025-04-01').outputs.capacityName.value]"
+    },
+    "logAnalyticsWorkspaceId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('monitoring-{0}', variables('token'))), '2025-04-01').outputs.workspaceId.value]"
+    }
+  }
+}

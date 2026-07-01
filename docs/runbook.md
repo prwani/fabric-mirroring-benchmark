@@ -25,9 +25,10 @@ PostgreSQL deployments keep password authentication enabled and enable Microsoft
 Preferred reader path after this repo is published:
 
 1. Click the **Deploy to Azure** button in `README.md`.
-2. Fill in the parameters in the Azure Portal.
-3. Deploy the template.
-4. Copy deployment outputs into `.env`.
+2. For Azure SQL Database, use the Azure SQL-specific button so the portal only shows Azure SQL, benchmark VM, Fabric capacity, and shared parameters.
+3. Fill in the parameters in the Azure Portal. `adminSshPublicKey` is your VM SSH public key; see [Create and use an SSH public-private key pair for Linux VMs in Azure](https://learn.microsoft.com/en-us/azure/virtual-machines/ssh-keys-portal). `operatorPublicIp` is your public IPv4 address in CIDR form, such as `203.0.113.10/32`.
+4. Deploy the template.
+5. Copy deployment outputs into `.env`.
 
 CLI path for local development:
 

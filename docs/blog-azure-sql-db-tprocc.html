@@ -34,6 +34,8 @@
     <tr><td>Azure SQL supported tier</td><td>This validation used Azure SQL Database vCore General Purpose.</td></tr>
     <tr><td>Fabric account</td><td>This run used <strong>Organizational account</strong> authentication for the Azure SQL mirrored database connection.</td></tr>
     <tr><td>Benchmark VM managed identity</td><td>Used by HammerDB to connect to Azure SQL in an Entra-only tenant.</td></tr>
+    <tr><td>Admin SSH public key</td><td>Required by the Deploy to Azure form for the benchmark VM. Generate an SSH key pair and paste the public key value, for example the contents of <code>~/.ssh/id_rsa.pub</code> or <code>~/.ssh/id_ed25519.pub</code>. See <a href="https://learn.microsoft.com/en-us/azure/virtual-machines/ssh-keys-portal">Create and use an SSH public-private key pair for Linux VMs in Azure</a>.</td></tr>
+    <tr><td>Operator public IP</td><td>Required by the Deploy to Azure form to restrict SSH access to your current machine. Use your public IPv4 address in CIDR form, for example <code>203.0.113.10/32</code>. From a terminal, <code>curl -4 ifconfig.me</code> can show the IP; append <code>/32</code> for a single-address rule.</td></tr>
     <tr><td>HammerDB</td><td>HammerDB 5.0 was used for the SQL Server TPROC-C workload.</td></tr>
     <tr><td>SQL tools</td><td><code>sqlcmd</code> and the SQL Server ODBC driver are required on the benchmark VM.</td></tr>
   </tbody>
@@ -66,9 +68,9 @@
 
 <h3>1. Deploy Azure resources</h3>
 
-<p>The easiest deployment path is the <strong>Deploy to Azure</strong> button. It uses the repository's <code>azuredeploy.json</code> ARM template and opens the Azure Portal custom deployment experience:</p>
+<p>The easiest deployment path is the Azure SQL-specific <strong>Deploy to Azure</strong> button. It uses <code>azuredeploy-azure-sql-db.json</code>, so the Azure Portal form only asks for Azure SQL Database, benchmark VM, Fabric capacity, and shared deployment values:</p>
 
-<p><a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fprwani%2Ffabric-mirroring-benchmark%2Fmain%2Fazuredeploy.json"><img src="https://aka.ms/deploytoazurebutton" alt="Deploy to Azure" /></a></p>
+<p><a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fprwani%2Ffabric-mirroring-benchmark%2Fmain%2Fazuredeploy-azure-sql-db.json"><img src="https://aka.ms/deploytoazurebutton" alt="Deploy to Azure" /></a></p>
 
 <table>
   <thead>
@@ -78,8 +80,9 @@
     </tr>
   </thead>
   <tbody>
-    <tr><td><code>sourceType</code></td><td><code>azure-sql-db</code></td></tr>
     <tr><td><code>location</code></td><td><code>swedencentral</code>, or another region where Azure SQL Database, VM, and Fabric capacity are available</td></tr>
+    <tr><td><code>adminSshPublicKey</code></td><td>Your SSH public key, such as the contents of <code>~/.ssh/id_ed25519.pub</code></td></tr>
+    <tr><td><code>operatorPublicIp</code></td><td>Your public IPv4 address with <code>/32</code>, such as <code>203.0.113.10/32</code></td></tr>
     <tr><td><code>azureSqlDatabaseName</code></td><td><code>tprocc</code></td></tr>
     <tr><td><code>azureSqlAzureAdOnlyAuthentication</code></td><td><code>true</code> for Entra-only tenants</td></tr>
     <tr><td><code>sqlEntraAdminLogin</code> / <code>sqlEntraAdminObjectId</code></td><td>The Entra admin principal for the Azure SQL server</td></tr>
@@ -87,7 +90,9 @@
   </tbody>
 </table>
 
-<p>The template deploys the Azure resources: Azure SQL Database, benchmark VM, Fabric capacity, networking, firewall rules, and monitoring. Fabric mirrored database setup remains an interactive Fabric step because authentication prompts and tenant permissions vary.</p>
+<p>The template deploys only the Azure SQL Database source, benchmark VM, Fabric capacity, networking, firewall rules, and monitoring. Fabric mirrored database setup remains an interactive Fabric step because authentication prompts and tenant permissions vary.</p>
+
+<p>The repository still keeps the original all-source <code>azuredeploy.json</code> for advanced use, but Azure Portal custom deployment does not hide unrelated parameters in a single conditional ARM template. Use the source-specific template for a cleaner portal experience.</p>
 
 <p>If you prefer a terminal-driven setup, or you are using an AI agent to run the deployment, use the CLI script path:</p>
 

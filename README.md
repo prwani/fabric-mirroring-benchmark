@@ -8,11 +8,19 @@ The default experiment deploys to **Sweden Central** and uses **HammerDB TPROC-C
 
 ## Deploy to Azure
 
+Azure SQL Database benchmark:
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fprwani%2Ffabric-mirroring-benchmark%2Fmain%2Fazuredeploy-azure-sql-db.json)
+
+PostgreSQL/default all-source template:
+
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fprwani%2Ffabric-mirroring-benchmark%2Fmain%2Fazuredeploy.json)
 
-The button deploys the default Azure infrastructure from `azuredeploy.json`: PostgreSQL Flexible Server, benchmark VM, Fabric capacity, networking, firewall rules, and Log Analytics. Fabric workspace/mirroring setup and benchmark execution continue from `docs/runbook.md` because Fabric mirrored database configuration depends on tenant permissions and Fabric control-plane APIs.
+The Azure SQL button uses a source-specific template, so the portal only asks for Azure SQL, benchmark VM, Fabric capacity, and shared parameters. The all-source template keeps the older `sourceType` switch for advanced CLI scenarios, but Azure Portal custom deployment displays all top-level parameters even when conditional modules skip unrelated source resources.
 
-For non-default sources, use the CLI path with `SOURCE_TYPE` until each source is live-validated.
+Both templates deploy Azure infrastructure only. Fabric workspace/mirroring setup and benchmark execution continue from `docs/runbook.md` because Fabric mirrored database configuration depends on tenant permissions and Fabric control-plane APIs.
+
+The portal requires `adminSshPublicKey` for VM access and `operatorPublicIp` to restrict SSH access. Generate an SSH public key using the [Azure Linux VM SSH key guidance](https://learn.microsoft.com/en-us/azure/virtual-machines/ssh-keys-portal), and enter your public IPv4 address with `/32`, for example `203.0.113.10/32`.
 
 ## What this repo provisions
 
@@ -88,6 +96,7 @@ Static validation available before live deployment:
 ```bash
 az bicep build --file infra/main.bicep
 az bicep build --file infra/main.bicep --outfile azuredeploy.json
+az bicep build --file infra/azure-sql-db.bicep --outfile azuredeploy-azure-sql-db.json
 bash -n scripts/provision/*.sh scripts/benchmark/*.sh scripts/lib/*.sh
 python3 -m py_compile scripts/provision/setup-fabric-items.py scripts/benchmark/run-cdc-latency-test.py scripts/benchmark/measure-initial-sync.py scripts/analysis/summarize-results.py
 ```
