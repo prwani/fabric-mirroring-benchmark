@@ -69,6 +69,8 @@ Set these important parameters:
 | `azureSqlAzureAdOnlyAuthentication` | `true` for Entra-only tenants |
 | `sqlEntraAdminLogin` / `sqlEntraAdminObjectId` | Defaults to the signed-in deploying user; override if another user or group should administer Azure SQL |
 | `fabricAdminUpn` | Defaults to the signed-in deploying user; override if another user should administer the Fabric capacity |
+| `customTags` | Optional JSON tags, for example `{"CostCenter":"12345"}`; built-in benchmark tags are retained |
+| `applyCustomTagsToAzureSql` | Keep `true` to apply `customTags` to the Azure SQL server and database; use the equivalent selectors to choose VM, Fabric, networking, and monitoring |
 | `fabricCapacitySku` | `F8` for the baseline run |
 
 The template deploys only the Azure SQL Database source, benchmark VM, Fabric capacity, networking, firewall rules, and monitoring. The benchmark VM is provisioned with a system-assigned managed identity; later steps use that identity for HammerDB-to-Azure-SQL authentication in Entra-only tenants.

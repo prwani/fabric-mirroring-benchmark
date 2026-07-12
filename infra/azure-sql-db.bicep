@@ -14,6 +14,24 @@ param tags object = {
   source: 'azure-sql-db'
 }
 
+@description('Optional custom tags to apply to selected resource groups, for example { "CostCenter": "12345", "Environment": "test" }. Built-in benchmark tags are always retained.')
+param customTags object = {}
+
+@description('Apply custom tags to the Azure SQL logical server and database.')
+param applyCustomTagsToAzureSql bool = true
+
+@description('Apply custom tags to the benchmark VM and network interface.')
+param applyCustomTagsToBenchmarkVm bool = true
+
+@description('Apply custom tags to the Fabric capacity.')
+param applyCustomTagsToFabricCapacity bool = true
+
+@description('Apply custom tags to the virtual network, network security group, and public IP address.')
+param applyCustomTagsToNetworking bool = true
+
+@description('Apply custom tags to the Log Analytics workspace.')
+param applyCustomTagsToMonitoring bool = true
+
 @description('Benchmark VM admin username.')
 param adminUsername string = 'azureuser'
 
@@ -66,13 +84,18 @@ param fabricAdminUpn string = deployer().userPrincipalName
 
 var token = toLower(uniqueString(subscription().id, resourceGroup().id, projectName, location))
 var currentClientSqlFirewallIp = replace(currentClientIpAddress, '/32', '')
+var azureSqlTags = applyCustomTagsToAzureSql ? union(customTags, tags) : tags
+var benchmarkVmTags = applyCustomTagsToBenchmarkVm ? union(customTags, tags) : tags
+var fabricCapacityTags = applyCustomTagsToFabricCapacity ? union(customTags, tags) : tags
+var networkingTags = applyCustomTagsToNetworking ? union(customTags, tags) : tags
+var monitoringTags = applyCustomTagsToMonitoring ? union(customTags, tags) : tags
 
 module network 'modules/networking.bicep' = {
   name: 'network-${token}'
   params: {
     projectName: projectName
     location: location
-    tags: tags
+    tags: networkingTags
     currentClientIpAddress: currentClientIpAddress
     token: token
   }
@@ -83,7 +106,7 @@ module monitoring 'modules/monitoring.bicep' = {
   params: {
     projectName: projectName
     location: location
-    tags: tags
+    tags: monitoringTags
     token: token
   }
 }
@@ -93,7 +116,7 @@ module azureSqlDb 'modules/azure-sql-db.bicep' = {
   params: {
     projectName: projectName
     location: location
-    tags: tags
+    tags: azureSqlTags
     token: token
     databaseName: azureSqlDatabaseName
     adminLogin: azureSqlAdminUser
@@ -116,7 +139,7 @@ module vm 'modules/benchmark-vm.bicep' = {
   params: {
     projectName: projectName
     location: location
-    tags: tags
+    tags: benchmarkVmTags
     token: token
     adminUsername: adminUsername
     adminSshPublicKey: adminSshPublicKey
@@ -131,7 +154,7 @@ module fabric 'modules/fabric-capacity.bicep' = {
   params: {
     projectName: projectName
     location: location
-    tags: tags
+    tags: fabricCapacityTags
     token: token
     skuName: fabricCapacitySku
     adminUpn: fabricAdminUpn

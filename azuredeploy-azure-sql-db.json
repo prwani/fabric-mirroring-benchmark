@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "8324005318573404163"
+      "templateHash": "7911490469171324908"
     }
   },
   "parameters": {
@@ -33,6 +33,48 @@
       },
       "metadata": {
         "description": "Tags applied to all resources."
+      }
+    },
+    "customTags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Optional custom tags to apply to selected resource groups, for example { \"CostCenter\": \"12345\", \"Environment\": \"test\" }. Built-in benchmark tags are always retained."
+      }
+    },
+    "applyCustomTagsToAzureSql": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Apply custom tags to the Azure SQL logical server and database."
+      }
+    },
+    "applyCustomTagsToBenchmarkVm": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Apply custom tags to the benchmark VM and network interface."
+      }
+    },
+    "applyCustomTagsToFabricCapacity": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Apply custom tags to the Fabric capacity."
+      }
+    },
+    "applyCustomTagsToNetworking": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Apply custom tags to the virtual network, network security group, and public IP address."
+      }
+    },
+    "applyCustomTagsToMonitoring": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Apply custom tags to the Log Analytics workspace."
       }
     },
     "adminUsername": {
@@ -156,7 +198,12 @@
   },
   "variables": {
     "token": "[toLower(uniqueString(subscription().id, resourceGroup().id, parameters('projectName'), parameters('location')))]",
-    "currentClientSqlFirewallIp": "[replace(parameters('currentClientIpAddress'), '/32', '')]"
+    "currentClientSqlFirewallIp": "[replace(parameters('currentClientIpAddress'), '/32', '')]",
+    "azureSqlTags": "[if(parameters('applyCustomTagsToAzureSql'), union(parameters('customTags'), parameters('tags')), parameters('tags'))]",
+    "benchmarkVmTags": "[if(parameters('applyCustomTagsToBenchmarkVm'), union(parameters('customTags'), parameters('tags')), parameters('tags'))]",
+    "fabricCapacityTags": "[if(parameters('applyCustomTagsToFabricCapacity'), union(parameters('customTags'), parameters('tags')), parameters('tags'))]",
+    "networkingTags": "[if(parameters('applyCustomTagsToNetworking'), union(parameters('customTags'), parameters('tags')), parameters('tags'))]",
+    "monitoringTags": "[if(parameters('applyCustomTagsToMonitoring'), union(parameters('customTags'), parameters('tags')), parameters('tags'))]"
   },
   "resources": [
     {
@@ -176,7 +223,7 @@
             "value": "[parameters('location')]"
           },
           "tags": {
-            "value": "[parameters('tags')]"
+            "value": "[variables('networkingTags')]"
           },
           "currentClientIpAddress": {
             "value": "[parameters('currentClientIpAddress')]"
@@ -340,7 +387,7 @@
             "value": "[parameters('location')]"
           },
           "tags": {
-            "value": "[parameters('tags')]"
+            "value": "[variables('monitoringTags')]"
           },
           "token": {
             "value": "[variables('token')]"
@@ -415,7 +462,7 @@
             "value": "[parameters('location')]"
           },
           "tags": {
-            "value": "[parameters('tags')]"
+            "value": "[variables('azureSqlTags')]"
           },
           "token": {
             "value": "[variables('token')]"
@@ -662,7 +709,7 @@
             "value": "[parameters('location')]"
           },
           "tags": {
-            "value": "[parameters('tags')]"
+            "value": "[variables('benchmarkVmTags')]"
           },
           "token": {
             "value": "[variables('token')]"
@@ -869,7 +916,7 @@
             "value": "[parameters('location')]"
           },
           "tags": {
-            "value": "[parameters('tags')]"
+            "value": "[variables('fabricCapacityTags')]"
           },
           "token": {
             "value": "[variables('token')]"

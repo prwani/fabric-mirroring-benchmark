@@ -82,6 +82,8 @@
     <tr><td><code>azureSqlAzureAdOnlyAuthentication</code></td><td><code>true</code> for Entra-only tenants</td></tr>
     <tr><td><code>sqlEntraAdminLogin</code> / <code>sqlEntraAdminObjectId</code></td><td>Defaults to the signed-in deploying user; override if another user or group should administer Azure SQL</td></tr>
     <tr><td><code>fabricAdminUpn</code></td><td>Defaults to the signed-in deploying user; override if another user should administer the Fabric capacity</td></tr>
+    <tr><td><code>customTags</code></td><td>Optional JSON tags, for example <code>{"CostCenter":"12345"}</code>; built-in benchmark tags are retained</td></tr>
+    <tr><td><code>applyCustomTagsToAzureSql</code></td><td>Keep <code>true</code> to apply <code>customTags</code> to the Azure SQL server and database; use the equivalent selectors to choose VM, Fabric, networking, and monitoring</td></tr>
     <tr><td><code>fabricCapacitySku</code></td><td><code>F8</code> for the baseline run</td></tr>
   </tbody>
 </table>
