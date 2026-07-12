@@ -20,14 +20,14 @@ param adminUsername string = 'azureuser'
 @description('SSH public key for benchmark VM access. Generate one with ssh-keygen and paste the .pub file content.')
 param adminSshPublicKey string
 
-@description('Operator public IP CIDR allowed to SSH to the benchmark VM, e.g. 203.0.113.10/32.')
-param operatorPublicIp string
+@description('Current client IP address in CIDR form, allowed to SSH to the benchmark VM, e.g. 203.0.113.10/32. Find it with curl -4 ifconfig.me or https://whatismyipaddress.com/.')
+param currentClientIpAddress string
 
-@description('Entra administrator login name for the Azure SQL logical server.')
-param sqlEntraAdminLogin string
+@description('Entra administrator login name for the Azure SQL logical server. Defaults to the signed-in deploying user for portal deployments.')
+param sqlEntraAdminLogin string = deployer().userPrincipalName
 
-@description('Entra administrator object ID for the Azure SQL logical server.')
-param sqlEntraAdminObjectId string
+@description('Entra administrator object ID for the Azure SQL logical server. Defaults to the deploying principal object ID.')
+param sqlEntraAdminObjectId string = deployer().objectId
 
 @description('Azure SQL Database name.')
 param azureSqlDatabaseName string = 'tprocc'
@@ -61,11 +61,11 @@ param azureSqlMaxSizeBytes int = 34359738368
 @allowed(['F2', 'F4', 'F8', 'F16', 'F32', 'F64'])
 param fabricCapacitySku string = 'F8'
 
-@description('UPN of the Fabric capacity administrator.')
-param fabricAdminUpn string
+@description('UPN of the Fabric capacity administrator. Defaults to the signed-in deploying user for portal deployments.')
+param fabricAdminUpn string = deployer().userPrincipalName
 
 var token = toLower(uniqueString(subscription().id, resourceGroup().id, projectName, location))
-var operatorSqlFirewallIp = replace(operatorPublicIp, '/32', '')
+var currentClientSqlFirewallIp = replace(currentClientIpAddress, '/32', '')
 
 module network 'modules/networking.bicep' = {
   name: 'network-${token}'
@@ -73,7 +73,7 @@ module network 'modules/networking.bicep' = {
     projectName: projectName
     location: location
     tags: tags
-    operatorPublicIp: operatorPublicIp
+    currentClientIpAddress: currentClientIpAddress
     token: token
   }
 }
@@ -102,7 +102,7 @@ module azureSqlDb 'modules/azure-sql-db.bicep' = {
     entraAdminObjectId: sqlEntraAdminObjectId
     azureAdOnlyAuthentication: azureSqlAzureAdOnlyAuthentication
     allowedBenchmarkIp: network.outputs.publicIpAddress
-    allowedOperatorIp: operatorSqlFirewallIp
+    allowedOperatorIp: currentClientSqlFirewallIp
     skuName: azureSqlSkuName
     skuTier: azureSqlSkuTier
     skuFamily: azureSqlSkuFamily

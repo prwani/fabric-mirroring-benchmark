@@ -29,8 +29,8 @@ param adminUsername string = 'azureuser'
 @description('SSH public key for benchmark VM access.')
 param adminSshPublicKey string
 
-@description('Operator public IP CIDR allowed to SSH to the benchmark VM, e.g. 203.0.113.10/32.')
-param operatorPublicIp string
+@description('Current client IP address in CIDR form, allowed to SSH to the benchmark VM, e.g. 203.0.113.10/32. Find it with curl -4 ifconfig.me or https://whatismyipaddress.com/.')
+param currentClientIpAddress string
 
 @description('PostgreSQL administrator username.')
 param postgresAdminUser string = 'pgadmin'
@@ -94,11 +94,11 @@ param mysqlSkuName string = 'Standard_D2ds_v4'
 @minValue(32)
 param mysqlStorageGb int = 128
 
-@description('Entra administrator login name for Azure SQL sources. Required when sourceType=azure-sql-db or sql-mi.')
-param sqlEntraAdminLogin string = ''
+@description('Entra administrator login name for Azure SQL sources. Defaults to the signed-in deploying user for portal deployments.')
+param sqlEntraAdminLogin string = deployer().userPrincipalName
 
-@description('Entra administrator object ID for Azure SQL sources. Required when sourceType=azure-sql-db or sql-mi.')
-param sqlEntraAdminObjectId string = ''
+@description('Entra administrator object ID for Azure SQL sources. Defaults to the deploying principal object ID.')
+param sqlEntraAdminObjectId string = deployer().objectId
 
 @description('Azure SQL Database name. Used when sourceType=azure-sql-db.')
 param azureSqlDatabaseName string = 'tprocc'
@@ -139,11 +139,11 @@ param sqlServerVmAdminPassword string = ''
 @allowed(['F2', 'F4', 'F8', 'F16', 'F32', 'F64'])
 param fabricCapacitySku string = 'F8'
 
-@description('UPN of the Fabric capacity administrator.')
-param fabricAdminUpn string
+@description('UPN of the Fabric capacity administrator. Defaults to the signed-in deploying user for portal deployments.')
+param fabricAdminUpn string = deployer().userPrincipalName
 
 var token = toLower(uniqueString(subscription().id, resourceGroup().id, projectName, location))
-var operatorSqlFirewallIp = replace(operatorPublicIp, '/32', '')
+var currentClientSqlFirewallIp = replace(currentClientIpAddress, '/32', '')
 
 module network 'modules/networking.bicep' = {
   name: 'network-${token}'
@@ -151,7 +151,7 @@ module network 'modules/networking.bicep' = {
     projectName: projectName
     location: location
     tags: tags
-    operatorPublicIp: operatorPublicIp
+    currentClientIpAddress: currentClientIpAddress
     token: token
   }
 }
@@ -219,7 +219,7 @@ module azureSqlDb 'modules/azure-sql-db.bicep' = if (sourceType == 'azure-sql-db
     entraAdminObjectId: sqlEntraAdminObjectId
     azureAdOnlyAuthentication: azureSqlAzureAdOnlyAuthentication
     allowedBenchmarkIp: network.outputs.publicIpAddress
-    allowedOperatorIp: operatorSqlFirewallIp
+    allowedOperatorIp: currentClientSqlFirewallIp
     skuName: azureSqlSkuName
     skuTier: azureSqlSkuTier
     skuFamily: azureSqlSkuFamily

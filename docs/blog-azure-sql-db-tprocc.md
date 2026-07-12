@@ -35,7 +35,7 @@ HammerDB VM
 | Fabric account | An account that can create the mirrored database connection. This run used **Organizational account** authentication. |
 | Azure SQL Entra admin principal | UPN and object ID for the principal that will be configured as the Azure SQL Microsoft Entra administrator. |
 | Admin SSH public key | Required by the Deploy to Azure form for the benchmark VM. Generate an SSH key pair and paste the public key value, for example the contents of `~/.ssh/id_rsa.pub` or `~/.ssh/id_ed25519.pub`. See [Create and use an SSH public-private key pair for Linux VMs in Azure](https://learn.microsoft.com/en-us/azure/virtual-machines/ssh-keys-portal). |
-| Operator public IP | Required by the Deploy to Azure form to restrict SSH access to your current machine. Use your public IPv4 address in CIDR form, for example `203.0.113.10/32`. From a terminal, `curl -4 ifconfig.me` can show the IP; append `/32` for a single-address rule. |
+| Current client IP address | Required by the Deploy to Azure form to restrict SSH access to your current machine. Use your public IPv4 address in CIDR form, for example `203.0.113.10/32`. From a terminal, `curl -4 ifconfig.me` can show the IP; append `/32` for a single-address rule. You can also use [WhatIsMyIPAddress.com](https://whatismyipaddress.com/). |
 
 ## Default benchmark setup
 
@@ -64,10 +64,11 @@ Set these important parameters:
 |---|---|
 | `location` | `swedencentral`, or another region where Azure SQL Database, VM, and Fabric capacity are available |
 | `adminSshPublicKey` | Your SSH public key, such as the contents of `~/.ssh/id_ed25519.pub` |
-| `operatorPublicIp` | Your public IPv4 address with `/32`, such as `203.0.113.10/32` |
+| `currentClientIpAddress` | Your public IPv4 address with `/32`, such as `203.0.113.10/32`; find it with `curl -4 ifconfig.me` or [WhatIsMyIPAddress.com](https://whatismyipaddress.com/) |
 | `azureSqlDatabaseName` | `tprocc` |
 | `azureSqlAzureAdOnlyAuthentication` | `true` for Entra-only tenants |
-| `sqlEntraAdminLogin` / `sqlEntraAdminObjectId` | The Entra admin principal for the Azure SQL server |
+| `sqlEntraAdminLogin` / `sqlEntraAdminObjectId` | Defaults to the signed-in deploying user; override if another user or group should administer Azure SQL |
+| `fabricAdminUpn` | Defaults to the signed-in deploying user; override if another user should administer the Fabric capacity |
 | `fabricCapacitySku` | `F8` for the baseline run |
 
 The template deploys only the Azure SQL Database source, benchmark VM, Fabric capacity, networking, firewall rules, and monitoring. The benchmark VM is provisioned with a system-assigned managed identity; later steps use that identity for HammerDB-to-Azure-SQL authentication in Entra-only tenants.

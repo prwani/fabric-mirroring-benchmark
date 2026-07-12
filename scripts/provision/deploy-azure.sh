@@ -14,7 +14,7 @@ DEPLOYMENT_NAME="${DEPLOYMENT_NAME:-fabric-pg-mirror-bench}"
 
 require_env AZURE_SUBSCRIPTION_ID
 require_env ADMIN_UPN
-require_env OPERATOR_PUBLIC_IP
+require_env CURRENT_CLIENT_IP_ADDRESS
 
 SOURCE_TYPE="${SOURCE_TYPE:-postgresql}"
 case "$SOURCE_TYPE" in
@@ -56,7 +56,7 @@ az deployment group create \
     sourceType="$SOURCE_TYPE" \
     location="$LOCATION" \
     adminSshPublicKey="$SSH_KEY" \
-    operatorPublicIp="$OPERATOR_PUBLIC_IP" \
+    currentClientIpAddress="$CURRENT_CLIENT_IP_ADDRESS" \
     postgresAdminUser="${POSTGRES_ADMIN_USER:-pgadmin}" \
     postgresAdminPassword="${POSTGRES_ADMIN_PASSWORD:-}" \
     postgresDatabaseName="${POSTGRES_DATABASE:-tprocc}" \

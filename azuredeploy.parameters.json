@@ -11,8 +11,8 @@
     "location": {
       "value": "swedencentral"
     },
-    "operatorPublicIp": {
-      "value": "REPLACE_WITH_OPERATOR_PUBLIC_IP_CIDR"
+    "currentClientIpAddress": {
+      "value": "REPLACE_WITH_CURRENT_CLIENT_IP_ADDRESS_CIDR"
     },
     "adminSshPublicKey": {
       "value": "REPLACE_WITH_SSH_PUBLIC_KEY"

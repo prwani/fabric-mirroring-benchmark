@@ -2,7 +2,7 @@ param projectName string
 param location string
 param tags object
 param token string
-param operatorPublicIp string
+param currentClientIpAddress string
 
 var vnetName = 'vnet-${projectName}-${token}'
 var nsgName = 'nsg-${projectName}-${token}'
@@ -25,7 +25,7 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2024-07-01' = {
           protocol: 'Tcp'
           sourcePortRange: '*'
           destinationPortRange: '22'
-          sourceAddressPrefix: operatorPublicIp
+          sourceAddressPrefix: currentClientIpAddress
           destinationAddressPrefix: '*'
         }
       }

@@ -16,7 +16,7 @@ Status: infrastructure adapter implemented; live deployment and Fabric mirroring
 - `SQL_ENTRA_ADMIN_LOGIN`
 - `SQL_ENTRA_ADMIN_OBJECT_ID`
 - `ADMIN_UPN`
-- `OPERATOR_PUBLIC_IP`
+- `CURRENT_CLIENT_IP_ADDRESS` — public IPv4 address in CIDR form, such as `203.0.113.10/32`; find it with `curl -4 ifconfig.me` or https://whatismyipaddress.com/
 
 Optional:
 

@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "17187973645497595407"
+      "templateHash": "8054384667404997223"
     }
   },
   "parameters": {
@@ -61,10 +61,10 @@
         "description": "SSH public key for benchmark VM access."
       }
     },
-    "operatorPublicIp": {
+    "currentClientIpAddress": {
       "type": "string",
       "metadata": {
-        "description": "Operator public IP CIDR allowed to SSH to the benchmark VM, e.g. 203.0.113.10/32."
+        "description": "Current client IP address in CIDR form, allowed to SSH to the benchmark VM, e.g. 203.0.113.10/32. Find it with curl -4 ifconfig.me or https://whatismyipaddress.com/."
       }
     },
     "postgresAdminUser": {
@@ -203,16 +203,16 @@
     },
     "sqlEntraAdminLogin": {
       "type": "string",
-      "defaultValue": "",
+      "defaultValue": "[deployer().userPrincipalName]",
       "metadata": {
-        "description": "Entra administrator login name for Azure SQL sources. Required when sourceType=azure-sql-db or sql-mi."
+        "description": "Entra administrator login name for Azure SQL sources. Defaults to the signed-in deploying user for portal deployments."
       }
     },
     "sqlEntraAdminObjectId": {
       "type": "string",
-      "defaultValue": "",
+      "defaultValue": "[deployer().objectId]",
       "metadata": {
-        "description": "Entra administrator object ID for Azure SQL sources. Required when sourceType=azure-sql-db or sql-mi."
+        "description": "Entra administrator object ID for Azure SQL sources. Defaults to the deploying principal object ID."
       }
     },
     "azureSqlDatabaseName": {
@@ -309,14 +309,15 @@
     },
     "fabricAdminUpn": {
       "type": "string",
+      "defaultValue": "[deployer().userPrincipalName]",
       "metadata": {
-        "description": "UPN of the Fabric capacity administrator."
+        "description": "UPN of the Fabric capacity administrator. Defaults to the signed-in deploying user for portal deployments."
       }
     }
   },
   "variables": {
     "token": "[toLower(uniqueString(subscription().id, resourceGroup().id, parameters('projectName'), parameters('location')))]",
-    "operatorSqlFirewallIp": "[replace(parameters('operatorPublicIp'), '/32', '')]"
+    "currentClientSqlFirewallIp": "[replace(parameters('currentClientIpAddress'), '/32', '')]"
   },
   "resources": [
     {
@@ -338,8 +339,8 @@
           "tags": {
             "value": "[parameters('tags')]"
           },
-          "operatorPublicIp": {
-            "value": "[parameters('operatorPublicIp')]"
+          "currentClientIpAddress": {
+            "value": "[parameters('currentClientIpAddress')]"
           },
           "token": {
             "value": "[variables('token')]"
@@ -352,7 +353,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "17744038669688139004"
+              "templateHash": "8305127486740609507"
             }
           },
           "parameters": {
@@ -368,7 +369,7 @@
             "token": {
               "type": "string"
             },
-            "operatorPublicIp": {
+            "currentClientIpAddress": {
               "type": "string"
             }
           },
@@ -397,7 +398,7 @@
                       "protocol": "Tcp",
                       "sourcePortRange": "*",
                       "destinationPortRange": "22",
-                      "sourceAddressPrefix": "[parameters('operatorPublicIp')]",
+                      "sourceAddressPrefix": "[parameters('currentClientIpAddress')]",
                       "destinationAddressPrefix": "*"
                     }
                   }
@@ -1106,7 +1107,7 @@
             "value": "[reference(resourceId('Microsoft.Resources/deployments', format('network-{0}', variables('token'))), '2025-04-01').outputs.publicIpAddress.value]"
           },
           "allowedOperatorIp": {
-            "value": "[variables('operatorSqlFirewallIp')]"
+            "value": "[variables('currentClientSqlFirewallIp')]"
           },
           "skuName": {
             "value": "[parameters('azureSqlSkuName')]"

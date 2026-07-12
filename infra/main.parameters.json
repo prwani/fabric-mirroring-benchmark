@@ -7,7 +7,7 @@
     "location": { "value": "swedencentral" },
     "adminUsername": { "value": "azureuser" },
     "adminSshPublicKey": { "value": "REPLACE_WITH_SSH_PUBLIC_KEY" },
-    "operatorPublicIp": { "value": "REPLACE_WITH_OPERATOR_PUBLIC_IP_CIDR" },
+    "currentClientIpAddress": { "value": "REPLACE_WITH_CURRENT_CLIENT_IP_ADDRESS_CIDR" },
     "postgresAdminUser": { "value": "pgadmin" },
     "postgresAdminPassword": { "value": "REPLACE_WITH_STRONG_PASSWORD" },
     "postgresDatabaseName": { "value": "tprocc" },

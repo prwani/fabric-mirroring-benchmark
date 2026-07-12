@@ -20,7 +20,7 @@ The Azure SQL button uses a source-specific template, so the portal only asks fo
 
 Both templates deploy Azure infrastructure only. Fabric workspace/mirroring setup and benchmark execution continue from `docs/runbook.md` because Fabric mirrored database configuration depends on tenant permissions and Fabric control-plane APIs.
 
-The portal requires `adminSshPublicKey` for VM access and `operatorPublicIp` to restrict SSH access. Generate an SSH public key using the [Azure Linux VM SSH key guidance](https://learn.microsoft.com/en-us/azure/virtual-machines/ssh-keys-portal), and enter your public IPv4 address with `/32`, for example `203.0.113.10/32`.
+The portal requires `adminSshPublicKey` for VM access and `currentClientIpAddress` to restrict SSH access to your current machine. Generate an SSH public key using the [Azure Linux VM SSH key guidance](https://learn.microsoft.com/en-us/azure/virtual-machines/ssh-keys-portal), and enter your public IPv4 address with `/32`, for example `203.0.113.10/32`. Find it with `curl -4 ifconfig.me` or [WhatIsMyIPAddress.com](https://whatismyipaddress.com/). Azure SQL Entra admin and Fabric capacity admin default to the signed-in deploying user, but you can override them for a group or another admin account.
 
 ## What this repo provisions
 

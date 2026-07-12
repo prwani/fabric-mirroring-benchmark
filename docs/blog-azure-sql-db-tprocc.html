@@ -34,7 +34,7 @@
     <tr><td>Fabric account</td><td>An account that can create the mirrored database connection. This run used <strong>Organizational account</strong> authentication.</td></tr>
     <tr><td>Azure SQL Entra admin principal</td><td>UPN and object ID for the principal that will be configured as the Azure SQL Microsoft Entra administrator.</td></tr>
     <tr><td>Admin SSH public key</td><td>Required by the Deploy to Azure form for the benchmark VM. Generate an SSH key pair and paste the public key value, for example the contents of <code>~/.ssh/id_rsa.pub</code> or <code>~/.ssh/id_ed25519.pub</code>. See <a href="https://learn.microsoft.com/en-us/azure/virtual-machines/ssh-keys-portal">Create and use an SSH public-private key pair for Linux VMs in Azure</a>.</td></tr>
-    <tr><td>Operator public IP</td><td>Required by the Deploy to Azure form to restrict SSH access to your current machine. Use your public IPv4 address in CIDR form, for example <code>203.0.113.10/32</code>. From a terminal, <code>curl -4 ifconfig.me</code> can show the IP; append <code>/32</code> for a single-address rule.</td></tr>
+    <tr><td>Current client IP address</td><td>Required by the Deploy to Azure form to restrict SSH access to your current machine. Use your public IPv4 address in CIDR form, for example <code>203.0.113.10/32</code>. From a terminal, <code>curl -4 ifconfig.me</code> can show the IP; append <code>/32</code> for a single-address rule. You can also use <a href="https://whatismyipaddress.com/">WhatIsMyIPAddress.com</a>.</td></tr>
   </tbody>
 </table>
 
@@ -77,10 +77,11 @@
   <tbody>
     <tr><td><code>location</code></td><td><code>swedencentral</code>, or another region where Azure SQL Database, VM, and Fabric capacity are available</td></tr>
     <tr><td><code>adminSshPublicKey</code></td><td>Your SSH public key, such as the contents of <code>~/.ssh/id_ed25519.pub</code></td></tr>
-    <tr><td><code>operatorPublicIp</code></td><td>Your public IPv4 address with <code>/32</code>, such as <code>203.0.113.10/32</code></td></tr>
+    <tr><td><code>currentClientIpAddress</code></td><td>Your public IPv4 address with <code>/32</code>, such as <code>203.0.113.10/32</code>; find it with <code>curl -4 ifconfig.me</code> or <a href="https://whatismyipaddress.com/">WhatIsMyIPAddress.com</a></td></tr>
     <tr><td><code>azureSqlDatabaseName</code></td><td><code>tprocc</code></td></tr>
     <tr><td><code>azureSqlAzureAdOnlyAuthentication</code></td><td><code>true</code> for Entra-only tenants</td></tr>
-    <tr><td><code>sqlEntraAdminLogin</code> / <code>sqlEntraAdminObjectId</code></td><td>The Entra admin principal for the Azure SQL server</td></tr>
+    <tr><td><code>sqlEntraAdminLogin</code> / <code>sqlEntraAdminObjectId</code></td><td>Defaults to the signed-in deploying user; override if another user or group should administer Azure SQL</td></tr>
+    <tr><td><code>fabricAdminUpn</code></td><td>Defaults to the signed-in deploying user; override if another user should administer the Fabric capacity</td></tr>
     <tr><td><code>fabricCapacitySku</code></td><td><code>F8</code> for the baseline run</td></tr>
   </tbody>
 </table>
