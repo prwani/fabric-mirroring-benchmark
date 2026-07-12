@@ -8,19 +8,23 @@ The default experiment deploys to **Sweden Central** and uses **HammerDB TPROC-C
 
 ## Deploy to Azure
 
-Azure SQL Database benchmark:
+Azure SQL Database benchmark with public network access:
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fprwani%2Ffabric-mirroring-benchmark%2Fmain%2Fazuredeploy-azure-sql-db.json)
+
+Azure SQL Database benchmark with private network access:
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fprwani%2Ffabric-mirroring-benchmark%2Fmain%2Fazuredeploy-azure-sql-db-private.json)
 
 PostgreSQL/default all-source template:
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fprwani%2Ffabric-mirroring-benchmark%2Fmain%2Fazuredeploy.json)
 
-The Azure SQL button uses a source-specific template, so the portal only asks for Azure SQL, benchmark VM, Fabric capacity, and shared parameters. The all-source template keeps the older `sourceType` switch for advanced CLI scenarios, but Azure Portal custom deployment displays all top-level parameters even when conditional modules skip unrelated source resources.
+Use the **public network** Azure SQL template for the simplest baseline: it enables the Azure SQL public endpoint and creates only the necessary firewall rules. Use the **private network** template if public endpoints are prohibited: it disables the public endpoint and provisions a private endpoint, private DNS zone, and a dedicated subnet delegated for a Fabric VNet data gateway. After deployment, create the VNet data gateway in **Manage connections and gateways** in Fabric/Power BI and select the deployed gateway subnet; this Fabric resource cannot currently be created by ARM/Bicep. The all-source template keeps the older `sourceType` switch for advanced CLI scenarios, but Azure Portal custom deployment displays all top-level parameters even when conditional modules skip unrelated source resources.
 
 Both templates deploy Azure infrastructure only. Fabric workspace/mirroring setup and benchmark execution continue from `docs/runbook.md` because Fabric mirrored database configuration depends on tenant permissions and Fabric control-plane APIs.
 
-The portal requires `adminSshPublicKey` for VM access and `currentClientIpAddress` to restrict SSH access to your current machine. Generate an SSH public key using the [Azure Linux VM SSH key guidance](https://learn.microsoft.com/en-us/azure/virtual-machines/ssh-keys-portal), and enter your public IPv4 address with `/32`, for example `203.0.113.10/32`. Find it with `curl -4 ifconfig.me` or [WhatIsMyIPAddress.com](https://whatismyipaddress.com/). Azure SQL Entra admin and Fabric capacity admin default to the signed-in deploying user, but you can override them for a group or another admin account.
+The portal requires `adminSshPublicKey` for VM access and `currentClientIpAddress` to restrict SSH access to your current machine. Generate an SSH public key using the [Azure Linux VM SSH key guidance](https://learn.microsoft.com/en-us/azure/virtual-machines/ssh-keys-portal), and enter your public IPv4 address with `/32`, for example `203.0.113.10/32`. Find it with `curl -4 ifconfig.me` or [WhatIsMyIPAddress.com](https://whatismyipaddress.com/). Azure SQL Entra admin and Fabric capacity admin default to the signed-in deploying user, but you can override them for a group or another admin account. The private-network template also requires `Microsoft.PowerPlatform` to be registered in the subscription before creating the VNet data gateway.
 
 ## What this repo provisions
 

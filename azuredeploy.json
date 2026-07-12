@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "8054384667404997223"
+      "templateHash": "13646246093364654838"
     }
   },
   "parameters": {
@@ -353,7 +353,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "8305127486740609507"
+              "templateHash": "840116548190462350"
             }
           },
           "parameters": {
@@ -371,6 +371,14 @@
             },
             "currentClientIpAddress": {
               "type": "string"
+            },
+            "includePrivateSqlSubnet": {
+              "type": "bool",
+              "defaultValue": false
+            },
+            "includeGatewaySubnet": {
+              "type": "bool",
+              "defaultValue": false
             }
           },
           "variables": {
@@ -378,7 +386,9 @@
             "nsgName": "[format('nsg-{0}-{1}', parameters('projectName'), parameters('token'))]",
             "publicIpName": "[format('pip-{0}-{1}', parameters('projectName'), parameters('token'))]",
             "vmSubnetName": "snet-vm",
-            "sqlMiSubnetName": "snet-sqlmi"
+            "sqlMiSubnetName": "snet-sqlmi",
+            "privateSqlSubnetName": "snet-private-endpoint",
+            "gatewaySubnetName": "snet-fabric-gateway"
           },
           "resources": [
             {
@@ -390,7 +400,7 @@
               "properties": {
                 "securityRules": [
                   {
-                    "name": "AllowSshFromOperator",
+                    "name": "AllowSshFromCurrentClient",
                     "properties": {
                       "priority": 100,
                       "direction": "Inbound",
@@ -430,31 +440,7 @@
                     "10.42.0.0/16"
                   ]
                 },
-                "subnets": [
-                  {
-                    "name": "[variables('vmSubnetName')]",
-                    "properties": {
-                      "addressPrefix": "10.42.1.0/24",
-                      "networkSecurityGroup": {
-                        "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
-                      }
-                    }
-                  },
-                  {
-                    "name": "[variables('sqlMiSubnetName')]",
-                    "properties": {
-                      "addressPrefix": "10.42.2.0/24",
-                      "delegations": [
-                        {
-                          "name": "managedInstanceDelegation",
-                          "properties": {
-                            "serviceName": "Microsoft.Sql/managedInstances"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
+                "subnets": "[concat(createArray(createObject('name', variables('vmSubnetName'), 'properties', createObject('addressPrefix', '10.42.1.0/24', 'networkSecurityGroup', createObject('id', resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))))), createObject('name', variables('sqlMiSubnetName'), 'properties', createObject('addressPrefix', '10.42.2.0/24', 'delegations', createArray(createObject('name', 'managedInstanceDelegation', 'properties', createObject('serviceName', 'Microsoft.Sql/managedInstances')))))), if(parameters('includePrivateSqlSubnet'), createArray(createObject('name', variables('privateSqlSubnetName'), 'properties', createObject('addressPrefix', '10.42.3.0/27', 'privateEndpointNetworkPolicies', 'Disabled'))), createArray()), if(parameters('includeGatewaySubnet'), createArray(createObject('name', variables('gatewaySubnetName'), 'properties', createObject('addressPrefix', '10.42.4.0/26', 'serviceEndpoints', createArray(createObject('service', 'Microsoft.Storage')), 'delegations', createArray(createObject('name', 'powerPlatformGatewayDelegation', 'properties', createObject('serviceName', 'Microsoft.PowerPlatform/vnetaccesslinks')))))), createArray()))]"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
@@ -469,6 +455,18 @@
             "sqlMiSubnetId": {
               "type": "string",
               "value": "[reference(resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')), '2024-07-01').subnets[1].id]"
+            },
+            "privateSqlSubnetId": {
+              "type": "string",
+              "value": "[if(parameters('includePrivateSqlSubnet'), reference(resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')), '2024-07-01').subnets[2].id, '')]"
+            },
+            "gatewaySubnetId": {
+              "type": "string",
+              "value": "[if(and(parameters('includeGatewaySubnet'), parameters('includePrivateSqlSubnet')), reference(resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')), '2024-07-01').subnets[3].id, '')]"
+            },
+            "virtualNetworkId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
             },
             "publicIpId": {
               "type": "string",
@@ -1132,7 +1130,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "15479147281395677725"
+              "templateHash": "7424577018466747390"
             }
           },
           "parameters": {
@@ -1178,6 +1176,14 @@
               "type": "string",
               "defaultValue": ""
             },
+            "enablePublicNetworkAccess": {
+              "type": "bool",
+              "defaultValue": true
+            },
+            "createPublicFirewallRules": {
+              "type": "bool",
+              "defaultValue": true
+            },
             "skuName": {
               "type": "string",
               "defaultValue": "GP_Gen5_4"
@@ -1214,9 +1220,10 @@
               "identity": {
                 "type": "SystemAssigned"
               },
-              "properties": "[union(union(createObject('publicNetworkAccess', 'Enabled', 'minimalTlsVersion', '1.2'), if(variables('enableSqlAdmin'), createObject('administratorLogin', parameters('adminLogin'), 'administratorLoginPassword', parameters('adminPassword')), createObject())), if(variables('enableEntraAdmin'), createObject('administrators', createObject('administratorType', 'ActiveDirectory', 'principalType', 'User', 'login', parameters('entraAdminLogin'), 'sid', parameters('entraAdminObjectId'), 'tenantId', tenant().tenantId, 'azureADOnlyAuthentication', parameters('azureAdOnlyAuthentication'))), createObject()))]"
+              "properties": "[union(union(createObject('publicNetworkAccess', if(parameters('enablePublicNetworkAccess'), 'Enabled', 'Disabled'), 'minimalTlsVersion', '1.2'), if(variables('enableSqlAdmin'), createObject('administratorLogin', parameters('adminLogin'), 'administratorLoginPassword', parameters('adminPassword')), createObject())), if(variables('enableEntraAdmin'), createObject('administrators', createObject('administratorType', 'ActiveDirectory', 'principalType', 'User', 'login', parameters('entraAdminLogin'), 'sid', parameters('entraAdminObjectId'), 'tenantId', tenant().tenantId, 'azureADOnlyAuthentication', parameters('azureAdOnlyAuthentication'))), createObject()))]"
             },
             {
+              "condition": "[parameters('createPublicFirewallRules')]",
               "type": "Microsoft.Sql/servers/firewallRules",
               "apiVersion": "2023-08-01",
               "name": "[format('{0}/{1}', variables('serverName'), 'AllowAzureServices')]",
@@ -1229,6 +1236,7 @@
               ]
             },
             {
+              "condition": "[parameters('createPublicFirewallRules')]",
               "type": "Microsoft.Sql/servers/firewallRules",
               "apiVersion": "2023-08-01",
               "name": "[format('{0}/{1}', variables('serverName'), 'AllowBenchmarkVm')]",
@@ -1237,12 +1245,11 @@
                 "endIpAddress": "[parameters('allowedBenchmarkIp')]"
               },
               "dependsOn": [
-                "[resourceId('Microsoft.Sql/servers/firewallRules', variables('serverName'), 'AllowAzureServices')]",
                 "[resourceId('Microsoft.Sql/servers', variables('serverName'))]"
               ]
             },
             {
-              "condition": "[not(empty(parameters('allowedOperatorIp')))]",
+              "condition": "[and(parameters('createPublicFirewallRules'), not(empty(parameters('allowedOperatorIp'))))]",
               "type": "Microsoft.Sql/servers/firewallRules",
               "apiVersion": "2023-08-01",
               "name": "[format('{0}/{1}', variables('serverName'), 'AllowOperatorIp')]",
@@ -1251,7 +1258,6 @@
                 "endIpAddress": "[parameters('allowedOperatorIp')]"
               },
               "dependsOn": [
-                "[resourceId('Microsoft.Sql/servers/firewallRules', variables('serverName'), 'AllowBenchmarkVm')]",
                 "[resourceId('Microsoft.Sql/servers', variables('serverName'))]"
               ]
             },
@@ -1274,8 +1280,6 @@
                 "requestedBackupStorageRedundancy": "Local"
               },
               "dependsOn": [
-                "[resourceId('Microsoft.Sql/servers/firewallRules', variables('serverName'), 'AllowBenchmarkVm')]",
-                "[resourceId('Microsoft.Sql/servers/firewallRules', variables('serverName'), 'AllowOperatorIp')]",
                 "[resourceId('Microsoft.Sql/servers', variables('serverName'))]"
               ]
             }

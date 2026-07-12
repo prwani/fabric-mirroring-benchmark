@@ -25,10 +25,20 @@ PostgreSQL deployments keep password authentication enabled and enable Microsoft
 Preferred reader path after this repo is published:
 
 1. Click the **Deploy to Azure** button in `README.md`.
-2. For Azure SQL Database, use the Azure SQL-specific button so the portal only shows Azure SQL, benchmark VM, Fabric capacity, and shared parameters.
+2. For Azure SQL Database, choose the **public network** template for the simplest baseline, or the **private network** template when Azure SQL public endpoints are prohibited.
 3. Fill in the parameters in the Azure Portal. `adminSshPublicKey` is your VM SSH public key; see [Create and use an SSH public-private key pair for Linux VMs in Azure](https://learn.microsoft.com/en-us/azure/virtual-machines/ssh-keys-portal). `currentClientIpAddress` is your public IPv4 address in CIDR form, such as `203.0.113.10/32`. Find it with `curl -4 ifconfig.me` or [WhatIsMyIPAddress.com](https://whatismyipaddress.com/). Azure SQL Entra admin and Fabric capacity admin default to the signed-in deploying user; override them only when a different user or group should administer those resources.
 4. Deploy the template.
 5. Copy deployment outputs into `.env`.
+
+### Private-network Azure SQL mode
+
+The private-network template disables Azure SQL public network access and deploys an Azure SQL private endpoint, private DNS zone, and a dedicated Fabric gateway subnet. Before creating the gateway, a subscription owner must register `Microsoft.PowerPlatform`.
+
+1. In Fabric or Power BI, open **Manage connections and gateways** and create a **Virtual network (VNet) data gateway**.
+2. Select the deployment resource group, VNet, and the subnet identified by the `fabricGatewaySubnetId` deployment output.
+3. When creating the mirrored Azure SQL Database connection, select that VNet data gateway instead of **None**.
+
+The VNet data gateway is a Fabric-managed resource and cannot currently be created by the ARM/Bicep template. Sweden Central supports VNet data gateways.
 
 CLI path for local development:
 

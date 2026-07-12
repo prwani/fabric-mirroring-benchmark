@@ -11,6 +11,11 @@ Status: infrastructure adapter implemented; live deployment and Fabric mirroring
 - Optional SQL authentication administrator only when `AZURE_SQL_AAD_ONLY_AUTH=false` and the tenant policy allows it
 - System-assigned managed identity on the Azure SQL logical server for Fabric OneLake publishing
 
+## Network modes
+
+- **Public network (default):** enables Azure SQL public network access and creates firewall rules for the benchmark VM, current client, and Azure services. Use `azuredeploy-azure-sql-db.json`.
+- **Private network:** disables Azure SQL public network access and deploys an Azure SQL private endpoint, private DNS zone, and dedicated Fabric VNet data gateway subnet. Use `azuredeploy-azure-sql-db-private.json`, then create the VNet data gateway manually in Fabric/Power BI **Manage connections and gateways**. The subscription must have the `Microsoft.PowerPlatform` provider registered.
+
 ## Required parameters
 
 - `SQL_ENTRA_ADMIN_LOGIN`

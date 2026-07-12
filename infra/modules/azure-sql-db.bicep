@@ -11,6 +11,8 @@ param entraAdminObjectId string = ''
 param azureAdOnlyAuthentication bool = true
 param allowedBenchmarkIp string
 param allowedOperatorIp string = ''
+param enablePublicNetworkAccess bool = true
+param createPublicFirewallRules bool = true
 param skuName string = 'GP_Gen5_4'
 param skuTier string = 'GeneralPurpose'
 param skuFamily string = 'Gen5'
@@ -29,7 +31,7 @@ resource server 'Microsoft.Sql/servers@2023-08-01' = {
     type: 'SystemAssigned'
   }
   properties: union(union({
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: enablePublicNetworkAccess ? 'Enabled' : 'Disabled'
     minimalTlsVersion: '1.2'
   }, enableSqlAdmin ? {
     administratorLogin: adminLogin
@@ -46,7 +48,7 @@ resource server 'Microsoft.Sql/servers@2023-08-01' = {
   } : {})
 }
 
-resource allowAzureServices 'Microsoft.Sql/servers/firewallRules@2023-08-01' = {
+resource allowAzureServices 'Microsoft.Sql/servers/firewallRules@2023-08-01' = if (createPublicFirewallRules) {
   parent: server
   name: 'AllowAzureServices'
   properties: {
@@ -55,24 +57,18 @@ resource allowAzureServices 'Microsoft.Sql/servers/firewallRules@2023-08-01' = {
   }
 }
 
-resource allowBenchmarkVm 'Microsoft.Sql/servers/firewallRules@2023-08-01' = {
+resource allowBenchmarkVm 'Microsoft.Sql/servers/firewallRules@2023-08-01' = if (createPublicFirewallRules) {
   parent: server
   name: 'AllowBenchmarkVm'
-  dependsOn: [
-    allowAzureServices
-  ]
   properties: {
     startIpAddress: allowedBenchmarkIp
     endIpAddress: allowedBenchmarkIp
   }
 }
 
-resource allowOperatorIp 'Microsoft.Sql/servers/firewallRules@2023-08-01' = if (!empty(allowedOperatorIp)) {
+resource allowOperatorIp 'Microsoft.Sql/servers/firewallRules@2023-08-01' = if (createPublicFirewallRules && !empty(allowedOperatorIp)) {
   parent: server
   name: 'AllowOperatorIp'
-  dependsOn: [
-    allowBenchmarkVm
-  ]
   properties: {
     startIpAddress: allowedOperatorIp
     endIpAddress: allowedOperatorIp
@@ -84,10 +80,6 @@ resource database 'Microsoft.Sql/servers/databases@2023-08-01' = {
   name: databaseName
   location: location
   tags: tags
-  dependsOn: [
-    allowBenchmarkVm
-    allowOperatorIp
-  ]
   sku: {
     name: skuName
     tier: skuTier

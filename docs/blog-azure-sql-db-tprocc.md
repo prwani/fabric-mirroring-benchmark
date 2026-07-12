@@ -54,7 +54,7 @@ HammerDB VM
 
 ### 1. Deploy Azure resources
 
-The easiest deployment path is the Azure SQL-specific **Deploy to Azure** button. It uses `azuredeploy-azure-sql-db.json`, so the Azure Portal form only asks for Azure SQL Database, benchmark VM, Fabric capacity, and shared deployment values:
+The easiest deployment path is the public-network Azure SQL-specific **Deploy to Azure** button. It uses `azuredeploy-azure-sql-db.json`, so the Azure Portal form only asks for Azure SQL Database, benchmark VM, Fabric capacity, and shared deployment values:
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fprwani%2Ffabric-mirroring-benchmark%2Fmain%2Fazuredeploy-azure-sql-db.json)
 
@@ -72,6 +72,8 @@ Set these important parameters:
 | `fabricCapacitySku` | `F8` for the baseline run |
 
 The template deploys only the Azure SQL Database source, benchmark VM, Fabric capacity, networking, firewall rules, and monitoring. The benchmark VM is provisioned with a system-assigned managed identity; later steps use that identity for HammerDB-to-Azure-SQL authentication in Entra-only tenants.
+
+For an Azure SQL environment that prohibits public endpoints, use the [private-network template](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fprwani%2Ffabric-mirroring-benchmark%2Fmain%2Fazuredeploy-azure-sql-db-private.json). It disables Azure SQL public network access and deploys a private endpoint, private DNS zone, and dedicated VNet data gateway subnet. Register `Microsoft.PowerPlatform`, then create the VNet data gateway manually in **Manage connections and gateways** and select it when configuring the Fabric connection.
 
 HammerDB, `sqlcmd`, and the SQL Server ODBC driver are runtime tools used on the benchmark VM after deployment. They are not prerequisites for the reader's local machine.
 

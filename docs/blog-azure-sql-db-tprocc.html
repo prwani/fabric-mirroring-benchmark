@@ -63,7 +63,7 @@
 
 <h3>1. Deploy Azure resources</h3>
 
-<p>The easiest deployment path is the Azure SQL-specific <strong>Deploy to Azure</strong> button. It uses <code>azuredeploy-azure-sql-db.json</code>, so the Azure Portal form only asks for Azure SQL Database, benchmark VM, Fabric capacity, and shared deployment values:</p>
+<p>The easiest deployment path is the public-network Azure SQL-specific <strong>Deploy to Azure</strong> button. It uses <code>azuredeploy-azure-sql-db.json</code>, so the Azure Portal form only asks for Azure SQL Database, benchmark VM, Fabric capacity, and shared deployment values:</p>
 
 <p><a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fprwani%2Ffabric-mirroring-benchmark%2Fmain%2Fazuredeploy-azure-sql-db.json"><img src="https://aka.ms/deploytoazurebutton" alt="Deploy to Azure" /></a></p>
 
@@ -87,6 +87,8 @@
 </table>
 
 <p>The template deploys only the Azure SQL Database source, benchmark VM, Fabric capacity, networking, firewall rules, and monitoring. The benchmark VM is provisioned with a system-assigned managed identity; later steps use that identity for HammerDB-to-Azure-SQL authentication in Entra-only tenants.</p>
+
+<p>For an Azure SQL environment that prohibits public endpoints, use the <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fprwani%2Ffabric-mirroring-benchmark%2Fmain%2Fazuredeploy-azure-sql-db-private.json">private-network template</a>. It disables Azure SQL public network access and deploys a private endpoint, private DNS zone, and dedicated VNet data gateway subnet. Register <code>Microsoft.PowerPlatform</code>, then create the VNet data gateway manually in <strong>Manage connections and gateways</strong> and select it when configuring the Fabric connection.</p>
 
 <p>HammerDB, <code>sqlcmd</code>, and the SQL Server ODBC driver are runtime tools used on the benchmark VM after deployment. They are not prerequisites for the reader's local machine.</p>
 
