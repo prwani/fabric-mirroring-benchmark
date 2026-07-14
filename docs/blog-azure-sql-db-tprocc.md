@@ -32,7 +32,7 @@ HammerDB VM
 |---|---|
 | Azure subscription | Permission to deploy a resource group, Azure SQL Database, VM, Fabric capacity, networking, firewall rules, and monitoring resources. |
 | Microsoft Fabric tenant | Permission to create a workspace, assign Fabric capacity, and create mirrored database items. |
-| Fabric account | An account that can create the mirrored database connection. This run used **Organizational account** authentication. |
+| Fabric account | An account that can create the mirrored database connection. Use **Organizational account** authentication for the Entra-only configuration in this guide. |
 | Azure SQL Entra admin principal | UPN and object ID for the principal that will be configured as the Azure SQL Microsoft Entra administrator. |
 | Admin SSH public key | Required by the Deploy to Azure form for the benchmark VM. Generate an SSH key pair and paste the public key value, for example the contents of `~/.ssh/id_rsa.pub` or `~/.ssh/id_ed25519.pub`. See [Create and use an SSH public-private key pair for Linux VMs in Azure](https://learn.microsoft.com/en-us/azure/virtual-machines/ssh-keys-portal). |
 | Current client IP address | Required by the Deploy to Azure form to restrict SSH access to your current machine. Use your public IPv4 address in CIDR form, for example `203.0.113.10/32`. From a terminal, `curl -4 ifconfig.me` can show the IP; append `/32` for a single-address rule. You can also use [WhatIsMyIPAddress.com](https://whatismyipaddress.com/). |
@@ -94,17 +94,19 @@ scripts/provision/deploy-azure.sh
 
 ### 2. Configure Azure SQL authentication for HammerDB
 
-In this tenant, Azure SQL was configured for Entra-only authentication. HammerDB connected from the benchmark VM through the VM managed identity.
+The public deployment template uses Entra-only authentication by default. Configure HammerDB to connect from the benchmark VM through its system-assigned managed identity.
 
-For an isolated benchmark server, set the VM managed identity as the Azure SQL Microsoft Entra admin:
+For an isolated benchmark server, run the following administration command from a terminal that has the repository, Azure CLI, and an Azure sign-in with permission to manage the deployed Azure SQL server. Your local terminal or Azure Cloud Shell are suitable; do not run it on the benchmark VM. Use the `azureSqlServerName` and `benchmarkVmName` deployment outputs, and omit `.database.windows.net` from the server name:
 
 ```bash
+export AZURE_SUBSCRIPTION_ID="<subscription-id>"
+export AZURE_RESOURCE_GROUP="<resource-group>"
 export AZURE_SQL_SERVER_NAME="<server-name>"
 export BENCHMARK_VM_NAME="<vm-name>"
 scripts/provision/setup-azure-sql-vm-mi-admin.sh
 ```
 
-Then configure HammerDB to use Entra/MSI authentication and keep BCP disabled:
+The script reports the benchmark VM managed identity object ID. SSH to the benchmark VM and run the remaining commands there. Configure HammerDB to use Entra/MSI authentication and keep BCP disabled:
 
 ```bash
 export AZURE_SQL_AUTH_MODE=entra
@@ -115,7 +117,7 @@ export AZURE_SQL_TPROC_C_USE_BCP=false
 "${HAMMERDB_CLI:-hammerdbcli}" auto scripts/benchmark/hammerdb-build-sqlserver-tprocc.tcl
 ```
 
-BCP was disabled because the HammerDB BCP load path attempted SQL authentication in this Entra-only validation. The ODBC/MSI path worked reliably.
+Keep BCP disabled for this Entra-only configuration because the HammerDB BCP load path can attempt SQL authentication. The ODBC/MSI connection path uses the benchmark VM managed identity.
 
 ### 3. Prepare benchmark columns and marker table
 
@@ -134,7 +136,7 @@ python3 scripts/provision/setup-azure-sql-cdc-marker-msi.py
 
 ### 4. Grant the Fabric principal access to Azure SQL
 
-For this run, the Fabric mirrored database connection used Organizational account authentication. The same Entra principal needed a contained Azure SQL database user and mirroring permissions.
+For the Organizational account authentication used in this guide, grant the same Entra principal a contained Azure SQL database user and mirroring permissions.
 
 If the SQL server identity does not have Directory Readers permissions, create the contained user by object ID:
 
@@ -154,7 +156,7 @@ In Fabric:
 1. Create or open the benchmark workspace.
 2. Create a mirrored Azure SQL Database item.
 3. Connect to the `tprocc` Azure SQL database.
-4. Use Organizational account authentication if that is the working path in your tenant.
+4. Select Organizational account authentication.
 5. Select the TPROC-C tables and `dbo.fabric_cdc_latency_marker`, or mirror all data.
 6. Enable **add any new tables to replication** if you want to run the new-table scenario.
 
@@ -224,7 +226,7 @@ For the most reliable comparison:
 4. Repeat each scenario and publish min, p50, p95, and max instead of a single run.
 5. Treat new-table auto-replication and schema evolution separately from row-level CDC, because they include control-plane/table-discovery work.
 
-## Benchmark results from this run
+## Reference benchmark results
 
 ### Initial sync
 
@@ -244,7 +246,7 @@ Initial row-count parity succeeded:
 
 ### Post-mirroring scenarios
 
-These are live-observed results from the validation environment. They should be read as first-run observed visibility measurements, not as definitive product limits.
+These results are reference observations from the documented configuration. Use them as a comparison point, not as service limits; capture and report results from your own environment.
 
 | Scenario | Observed result |
 |---|---:|
@@ -257,12 +259,12 @@ The new-table scenario confirmed that Fabric picked up `dbo.fabric_auto_table_12
 
 The large-update scenario used the TPROC-C `stock` table. At 10 warehouses, `stock` contains 1,000,000 rows. The test updated 100,000 rows and Fabric showed all 100,000 updated rows after about 174 seconds from the last source update timestamp.
 
-The marker, new-table, schema-evolution, and stock-update numbers should be rerun with a 1-second poll interval and repeated trials before publication if the blog needs precise benchmark statistics.
+For comparable statistics, run each scenario with a 1-second poll interval and repeated trials, then report min, p50, p95, and max latency.
 
 ## Lessons learned
 
 - Scale Azure SQL before starting HammerDB builds. Scaling during a build can interrupt ODBC sessions.
-- For Azure SQL Entra-only tenants, HammerDB works through ODBC/MSI, but the SQL Server BCP load path attempted SQL authentication in this validation.
+- For Azure SQL Entra-only configurations, HammerDB uses ODBC/MSI; keep the SQL Server BCP load path disabled because it can attempt SQL authentication.
 - Fabric Organizational account authentication required the same Entra user to exist as a contained database user with mirroring permissions.
 - Fabric mirroring status APIs and Fabric SQL endpoint visibility can differ briefly.
 - New-table auto-replication and schema evolution are useful operational tests, but they should not be interpreted as pure row-level CDC latency.
