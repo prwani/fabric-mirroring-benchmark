@@ -1,12 +1,12 @@
 # Benchmarking Microsoft Fabric Mirroring with Azure SQL Database and HammerDB TPROC-C
 
-This post is part of a benchmark series for Microsoft Fabric Mirroring across operational database sources. This article focuses on **Azure SQL Database** as the source system and **HammerDB TPROC-C** as the transactional workload.
+This post is part of a benchmark series for Microsoft Fabric Mirroring across **supported operational data sources**. This article focuses on **Azure SQL Database** as the source system and **HammerDB TPROC-C** as the transactional workload.
 
-The goal is not to publish a universal service-level number. The goal is to provide a reproducible way to deploy a source system, generate an OLTP dataset, configure Fabric Mirroring, and measure how quickly data becomes queryable through the Fabric SQL endpoint for specific test scenarios.
+The goal is not to publish a universal service-level number. The goal is to provide a reproducible way to deploy a source system, generate an OLTP dataset, configure Fabric Mirroring, and measure how quickly data becomes queryable through the Fabric **SQL analytics endpoint** for specific test scenarios.
 
 ## What is Microsoft Fabric Mirroring?
 
-Microsoft Fabric Mirroring continuously replicates supported operational data sources into Fabric so the data can be queried and analyzed without building a custom ETL pipeline. For this benchmark, Azure SQL Database is mirrored into a Fabric mirrored database. The validation queries run against the mirrored database SQL endpoint.
+Microsoft Fabric Mirroring continuously replicates supported operational data sources into Fabric so the data can be queried and analyzed without building a custom ETL pipeline. For this benchmark, Azure SQL Database is mirrored into a Fabric mirrored database. Validation queries run against its SQL analytics endpoint.
 
 The benchmark uses HammerDB **TPROC-C** because Fabric Mirroring sources are usually transactional systems. TPROC-C gives us:
 
@@ -22,7 +22,7 @@ Architecture:
 HammerDB VM
   -> Azure SQL Database
       -> Microsoft Fabric Mirroring
-          -> Fabric mirrored database SQL endpoint
+          -> Fabric mirrored database SQL analytics endpoint
               -> Row-count and CDC visibility checks
 ```
 
@@ -73,13 +73,13 @@ Set these important parameters:
 | `applyCustomTagsToAzureSql` | Keep `true` to apply `customTags` to the Azure SQL server and database; use the equivalent selectors to choose VM, Fabric, networking, and monitoring |
 | `fabricCapacitySku` | `F8` for the baseline run |
 
-The template deploys only the Azure SQL Database source, benchmark VM, Fabric capacity, networking, firewall rules, and monitoring. The benchmark VM is provisioned with a system-assigned managed identity; later steps use that identity for HammerDB-to-Azure-SQL authentication in Entra-only tenants.
+The template deploys Azure infrastructure and the benchmark VM is provisioned with a system-assigned managed identity. Both the **Deploy to Azure** template and the CLI deployment use the same repository post-deployment script workflow to provision the source connection, mirrored database, and SQL analytics endpoint. The public path does not require manually creating a mirror in the Fabric portal.
 
 For an Azure SQL environment that prohibits public endpoints, use the [private-network template](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fprwani%2Ffabric-mirroring-benchmark%2Fmain%2Fazuredeploy-azure-sql-db-private.json). It disables Azure SQL public network access and deploys a private endpoint, private DNS zone, and dedicated VNet data gateway subnet. Register `Microsoft.PowerPlatform`, then create the VNet data gateway manually in **Manage connections and gateways** and select it when configuring the Fabric connection.
 
 HammerDB, `sqlcmd`, and the SQL Server ODBC driver are runtime tools used on the benchmark VM after deployment. They are not prerequisites for the reader's local machine.
 
-Fabric mirrored database setup remains an interactive Fabric step because authentication prompts and tenant permissions vary.
+Use the post-deployment scripts below for the public path. The only interactive exception in this guide is creating a VNet data gateway for the private-network option; it is a Fabric-managed gateway resource, not manual mirror creation.
 
 The repository still keeps the original all-source `azuredeploy.json` for advanced use, but Azure Portal custom deployment does not hide unrelated parameters in a single conditional ARM template. Use the source-specific template for a cleaner portal experience.
 
@@ -92,7 +92,25 @@ PROJECT_NAME=fsqlmb \
 scripts/provision/deploy-azure.sh
 ```
 
-### 2. Configure Azure SQL authentication for HammerDB
+### 2. Optionally provision a Fabric source app and Directory Readers
+
+The script-based deployment can create the source service principal and grant the Azure SQL logical-server managed identity **Directory Readers**. Set both flags before deployment when creating a new service-principal connection:
+
+```bash
+export ASSIGN_AZURE_SQL_SERVER_DIRECTORY_READERS=true
+export PROVISION_FABRIC_SOURCE_APP=true
+SOURCE_TYPE=azure-sql-db scripts/provision/deploy-azure.sh
+```
+
+`ASSIGN_AZURE_SQL_SERVER_DIRECTORY_READERS` requires a tenant administrator who can assign directory roles. Directory Readers lets the Azure SQL server managed identity resolve the source service principal while `grant-azure-sql-master-entra-principal-msi.py` creates its server login. The generated `results/fabric-source-app.env` contains a client secret, is ignored by Git through `*.env`, and is written with mode `0600`. Source it only in the protected benchmark session:
+
+```bash
+source results/fabric-source-app.env
+```
+
+For an existing approved connection, set `FABRIC_CONNECTION_ID` instead; do not create another app or connection.
+
+### 3. Configure Azure SQL authentication for HammerDB
 
 The public deployment template uses Entra-only authentication by default. Configure HammerDB to connect from the benchmark VM through its system-assigned managed identity.
 
@@ -119,13 +137,13 @@ export AZURE_SQL_TPROC_C_USE_BCP=false
 
 Keep BCP disabled for this Entra-only configuration because the HammerDB BCP load path can attempt SQL authentication. The ODBC/MSI connection path uses the benchmark VM managed identity.
 
-### 3. Prepare benchmark columns and marker table
+### 4. Prepare benchmark columns and marker table
 
 Add benchmark-owned columns to `dbo.stock` before Fabric Mirroring starts. This ensures the large-update scenario is included in the first replication attempt rather than relying on post-mirroring schema changes for the largest table.
 
 ```bash
-sqlcmd $AZURE_SQL_SQLCMD_ARGS \
-  -i scripts/provision/setup-tprocc-benchmark-columns-azure-sql.sql
+python3 scripts/provision/run-azure-sql-msi.py \
+  --file scripts/provision/setup-tprocc-benchmark-columns-azure-sql.sql
 ```
 
 Create the marker table used for controlled CDC visibility checks:
@@ -134,37 +152,45 @@ Create the marker table used for controlled CDC visibility checks:
 python3 scripts/provision/setup-azure-sql-cdc-marker-msi.py
 ```
 
-### 4. Grant the Fabric principal access to Azure SQL
+`dbo.fabric_cdc_latency_marker` is benchmark-owned and is not an application table. Its primary key is `marker_id` (`uniqueidentifier`); `batch_id`, `operation_type`, `source_send_ts`, and `source_commit_ts` identify and timestamp each controlled change, and `payload` optionally sizes it. The marker test inserts a row, records the source commit timestamp, then polls for that exact ID in the SQL analytics endpoint. It measures end-to-end **CDC visibility after mirroring has started**; it does not measure the initial snapshot, schema-discovery work, or Fabric internal replication time.
 
-For the Organizational account authentication used in this guide, grant the same Entra principal a contained Azure SQL database user and mirroring permissions.
+### 5. Create the Azure SQL login and mapped database user
 
-If the SQL server identity does not have Directory Readers permissions, create the contained user by object ID:
+For a service-principal connection, first create the service-principal server login in `master`, then create its mapped database user and grant mirroring permissions. This is the required order: Directory Readers on the **Azure SQL server managed identity** resolves the service principal for `CREATE LOGIN ... FROM EXTERNAL PROVIDER`; the database helper then maps `CREATE USER ... FOR LOGIN` and grants permissions.
 
 ```bash
-export FABRIC_ENTRA_PRINCIPAL="<UPN used in Fabric>"
+python3 scripts/provision/grant-azure-sql-master-entra-principal-msi.py
+python3 scripts/provision/grant-azure-sql-fabric-entra-principal-msi.py
+```
+
+For an Organizational account connection, set the same `FABRIC_ENTRA_*` values to the approved Entra user or group and use the same two-step login/user flow. `FABRIC_REPLACE_CONTAINED_USER=true` is only for replacing a benchmark-owned mapped user.
+
+```bash
+export FABRIC_ENTRA_PRINCIPAL="<service-principal display name, UPN, or group>"
 export FABRIC_ENTRA_OBJECT_ID="<Entra object ID>"
 export FABRIC_ENTRA_PRINCIPAL_TYPE=E
-python3 scripts/provision/grant-azure-sql-fabric-entra-principal-msi.py
 ```
 
 The helper grants the permissions needed by Fabric Mirroring, including `SELECT`, `ALTER ANY EXTERNAL MIRROR`, `VIEW DATABASE PERFORMANCE STATE`, and `VIEW DATABASE SECURITY STATE`.
 
-### 5. Create the Fabric mirrored database
+### 6. Create the Fabric mirrored database through the public API
 
-In Fabric:
+Set `FABRIC_CREATE_CONNECTION=true` only if the source app credentials are available and a connection does not already exist. The script creates or reuses the workspace and connection, creates or reuses the mirrored database, starts it, waits for its SQL analytics endpoint, and writes non-secret endpoint settings to `results/fabric-mirror-setup.env`.
 
-1. Create or open the benchmark workspace.
-2. Create a mirrored Azure SQL Database item.
-3. Connect to the `tprocc` Azure SQL database.
-4. Select Organizational account authentication.
-5. Select the TPROC-C tables and `dbo.fabric_cdc_latency_marker`, or mirror all data.
-6. Enable **add any new tables to replication** if you want to run the new-table scenario.
+```bash
+export FABRIC_CREATE_CONNECTION=true
+export FABRIC_GRANT_BENCHMARK_VM_WORKSPACE_VIEWER=true
+python3 scripts/provision/setup-fabric-items.py
+source results/fabric-mirror-setup.env
+```
+
+`FABRIC_MIRROR_TABLES` controls the selected TPROC-C tables and `dbo.fabric_cdc_latency_marker`; set it empty to mirror all data. Enable the source's **add any new tables to replication** option only when testing the new-table scenario.
 
 ## Benchmark scenarios and test files
 
 | Scenario | Purpose | Script or query file |
 |---|---|---|
-| Initial sync parity | Confirms the TPROC-C tables are visible in Fabric with matching row counts. | `scripts/benchmark/measure-initial-sync.py` |
+| Initial snapshot parity | Confirms the TPROC-C tables copied during the initial snapshot are visible with matching row counts. | `scripts/benchmark/measure-initial-sync.py` |
 | Marker insert latency | Writes controlled marker rows to Azure SQL and polls Fabric until each marker appears. | `scripts/benchmark/run-cdc-latency-test.py` |
 | New table auto-replication | Creates a new source table after mirroring starts and checks whether Fabric auto-adds it. | `scripts/benchmark/run-new-table-auto-replication-test.py` |
 | Large stock update | Updates benchmark-owned columns on 100,000 rows in `dbo.stock` and waits for all updated rows in Fabric. | `scripts/benchmark/run-stock-bulk-update.py` |
@@ -172,6 +198,10 @@ In Fabric:
 | Fabric status capture | Captures Fabric table mirroring status snapshots where the API is available. | `scripts/benchmark/capture-fabric-mirroring-status.py` |
 
 ## Run or modify the tests
+
+`AZURE_SQL_SQLCMD_ARGS` is the complete `sqlcmd` argument string for the **source** Azure SQL database (for example, `-C -S <server> -d tprocc -G`). `FABRIC_SQLCMD_ARGS` is the equivalent string for the **target SQL analytics endpoint**; `setup-fabric-items.py` derives and writes it to `results/fabric-mirror-setup.env`.
+
+On Linux, `sqlcmd -G` uses an Entra user authentication flow; it does **not** obtain the benchmark VM's managed-identity token. Use those variables only for an interactive operator session. For noninteractive validation on the benchmark VM, use ODBC/MSI: `run-azure-sql-msi.py` (and the Azure SQL MSI helpers) for the source, and the Fabric ODBC access-token path after granting the VM identity Fabric Viewer for the target. This keeps source and target noninteractive validation on ODBC/MSI rather than relying on `sqlcmd -G`.
 
 The benchmark scripts are parameterized through command-line arguments and environment variables. Start with the default 10 TPROC-C warehouses, then change one variable at a time.
 
@@ -214,23 +244,33 @@ For publication-quality numbers, run each scenario multiple times, keep the poll
 
 ## Measurement notes
 
-The scripts measure **user-observed visibility** through the Fabric SQL endpoint. They record the source commit timestamp, poll the Fabric SQL endpoint, and record the first time the expected row or row count is visible.
+The scripts measure **user-observed visibility** through the Fabric SQL analytics endpoint. They record the source commit timestamp, poll the SQL analytics endpoint, and record the first time the expected row or row count is visible.
 
-That means each number is an observed upper bound, not an exact internal replication timestamp. If the poll interval is 15 seconds, the actual visibility could have happened up to 15 seconds before the script detected it. SQL endpoint session freshness and Fabric status API refresh timing can also affect when a polling client observes the change.
+That means each number is an observed upper bound, not an exact internal replication timestamp. If the poll interval is 15 seconds, the actual visibility could have happened up to 15 seconds before the script detected it. SQL analytics endpoint session freshness and Fabric status API refresh timing can also affect when a polling client observes the change.
 
 For the most reliable comparison:
 
 1. Use `--poll-seconds 1` for confirmation runs.
-2. Reconnect or use fresh Fabric SQL endpoint sessions during polling if stale reads are suspected.
+2. Reconnect or use fresh SQL analytics endpoint sessions during polling if stale reads are suspected.
 3. Capture Fabric mirroring status snapshots during the same test window.
 4. Repeat each scenario and publish min, p50, p95, and max instead of a single run.
 5. Treat new-table auto-replication and schema evolution separately from row-level CDC, because they include control-plane/table-discovery work.
 
+### Metadata refresh is a result-consistency step
+
+After initial setup or a schema/table-selection change, refresh SQL analytics endpoint metadata before validating the resulting tables or columns:
+
+```bash
+python3 scripts/benchmark/refresh-fabric-sql-endpoint-metadata.py
+```
+
+Save the output with the run. A table result of `NotRun` together with a recent `lastSuccess` is not an error: it indicates no additional refresh was needed for that table. Do not invoke metadata refresh during marker-latency polling, because it is a result-consistency operation, not part of the CDC latency path.
+
 ## Reference benchmark results
 
-### Initial sync
+### Initial snapshot
 
-Initial row-count parity succeeded:
+Verified initial-snapshot row-count parity:
 
 | Table | Source rows | Fabric rows |
 |---|---:|---:|
@@ -250,7 +290,7 @@ These results are reference observations from the documented configuration. Use 
 
 | Scenario | Observed result |
 |---|---:|
-| Marker insert visibility | 354.6 seconds |
+| Marker insert visibility | 78.6 seconds (one observation) |
 | New table auto-replication, 1,000 rows | 151.9 seconds |
 | `warehouse` schema evolution and 2 updated rows | 430.2 seconds |
 | `stock` 100K-row update visibility | 174.2 seconds |
@@ -259,13 +299,20 @@ The new-table scenario confirmed that Fabric picked up `dbo.fabric_auto_table_12
 
 The large-update scenario used the TPROC-C `stock` table. At 10 warehouses, `stock` contains 1,000,000 rows. The test updated 100,000 rows and Fabric showed all 100,000 updated rows after about 174 seconds from the last source update timestamp.
 
-For comparable statistics, run each scenario with a 1-second poll interval and repeated trials, then report min, p50, p95, and max latency.
+The 78.6-second marker value is one environment-specific observation, not a service guarantee. For comparable statistics, run each scenario with a 1-second poll interval and repeated trials, then report min, p50, p95, and max latency.
 
 ## Lessons learned
 
 - Scale Azure SQL before starting HammerDB builds. Scaling during a build can interrupt ODBC sessions.
 - For Azure SQL Entra-only configurations, HammerDB uses ODBC/MSI; keep the SQL Server BCP load path disabled because it can attempt SQL authentication.
 - Fabric Organizational account authentication required the same Entra user to exist as a contained database user with mirroring permissions.
-- Fabric mirroring status APIs and Fabric SQL endpoint visibility can differ briefly.
+- Fabric mirroring status APIs and SQL analytics endpoint visibility can differ briefly.
 - New-table auto-replication and schema evolution are useful operational tests, but they should not be interpreted as pure row-level CDC latency.
 - Keep source-system posts separate as the benchmark series expands.
+
+## References
+
+- [Microsoft Fabric Mirroring overview and supported operational data sources](https://learn.microsoft.com/fabric/mirroring/overview)
+- [Tutorial: Mirror Azure SQL Database in Microsoft Fabric](https://learn.microsoft.com/fabric/mirroring/azure-sql-database-tutorial)
+- [Fabric Mirroring REST API](https://learn.microsoft.com/fabric/mirroring/mirrored-database-rest-api)
+- [Microsoft Entra service principals with Azure SQL](https://learn.microsoft.com/azure/azure-sql/database/authentication-aad-service-principal-tutorial)

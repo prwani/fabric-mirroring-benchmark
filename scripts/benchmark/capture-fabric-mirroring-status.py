@@ -6,50 +6,19 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.error import HTTPError
-from urllib.request import Request, urlopen
+from urllib.parse import urlencode
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.lib.fabric_api import FabricClient, access_token
 
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-
-
-def access_token() -> str:
-    return subprocess.check_output(
-        [
-            "az",
-            "account",
-            "get-access-token",
-            "--resource",
-            "https://api.fabric.microsoft.com",
-            "--query",
-            "accessToken",
-            "-o",
-            "tsv",
-        ],
-        text=True,
-    ).strip()
-
-
-def fabric_post(path: str, token: str) -> dict:
-    request = Request(
-        f"https://api.fabric.microsoft.com/v1/{path}",
-        data=b"{}",
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
-    try:
-        with urlopen(request, timeout=60) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except HTTPError as exc:
-        body = exc.read().decode("utf-8")
-        raise RuntimeError(f"Fabric API failed: {exc.code} {body}") from exc
 
 
 def parse_args() -> argparse.Namespace:
@@ -60,14 +29,30 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def table_mirroring_status(client: FabricClient, base: str) -> dict:
+    """Collect every page of table status because large mirrors are paginated."""
+
+    tables: list[dict] = []
+    continuation_token: str | None = None
+    while True:
+        path = f"{base}/getTablesMirroringStatus"
+        if continuation_token:
+            path = f"{path}?{urlencode({'continuationToken': continuation_token})}"
+        response = client.request("POST", path, {})
+        tables.extend(response.body.get("data", response.body.get("value", [])))
+        continuation_token = response.body.get("continuationToken")
+        if not continuation_token:
+            return {"value": tables}
+
+
 def main() -> int:
     args = parse_args()
-    token = access_token()
+    client = FabricClient(access_token())
     base = f"workspaces/{args.workspace_id}/mirroredDatabases/{args.mirrored_database_id}"
     payload = {
         "capturedAt": utc_now(),
-        "mirroringStatus": fabric_post(f"{base}/getMirroringStatus", token),
-        "tablesMirroringStatus": fabric_post(f"{base}/getTablesMirroringStatus", token),
+        "mirroringStatus": client.request("POST", f"/{base}/getMirroringStatus", {}).body,
+        "tablesMirroringStatus": table_mirroring_status(client, f"/{base}"),
     }
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)

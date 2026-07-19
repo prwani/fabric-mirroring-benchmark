@@ -1,6 +1,6 @@
 # Azure SQL Database source adapter
 
-Status: infrastructure adapter implemented; live deployment and Fabric mirroring validation pending.
+Status: live deployment, Fabric mirroring, initial-snapshot parity, and SQL analytics endpoint validation verified.
 
 ## Azure resource
 
@@ -10,6 +10,8 @@ Status: infrastructure adapter implemented; live deployment and Fabric mirroring
 - Microsoft Entra-only authentication by default for policy-compliant deployments
 - Optional SQL authentication administrator only when `AZURE_SQL_AAD_ONLY_AUTH=false` and the tenant policy allows it
 - System-assigned managed identity on the Azure SQL logical server for Fabric OneLake publishing
+
+This adapter benchmarks one of Fabric Mirroring's **supported operational data sources**. Query the mirrored database through its **SQL analytics endpoint**.
 
 ## Network modes
 
@@ -38,24 +40,32 @@ export PROJECT_NAME=fsqlmb
 scripts/provision/deploy-azure.sh
 ```
 
+To have the script-based deployment create a new source service principal and assign Directory Readers to the Azure SQL logical-server managed identity, set these optional flags first:
+
+```bash
+export ASSIGN_AZURE_SQL_SERVER_DIRECTORY_READERS=true
+export PROVISION_FABRIC_SOURCE_APP=true
+scripts/provision/deploy-azure.sh
+source results/fabric-source-app.env
+```
+
+Directory Readers requires a tenant administrator who can assign directory roles. The generated source-app environment file contains a secret, is ignored by Git via `*.env`, and is created with mode `0600`; do not commit or share it. The Deploy-to-Azure template uses the same post-deployment scripts after provisioning infrastructure. For an existing approved Fabric connection, provide `FABRIC_CONNECTION_ID` rather than provisioning another source app.
+
 Copy these deployment outputs into `.env`:
 
 - `AZURE_SQL_HOST=<azureSqlFullyQualifiedDomainName>`
 - `AZURE_SQL_DATABASE=<azureSqlDatabaseName>`
 - `FABRIC_CAPACITY_ID=<fabricCapacityId>`
 - benchmark VM public IP
+- `AZURE_SQL_SERVER_PRINCIPAL_ID`
 
 ## Prepare Azure SQL Database for mirroring
 
-Default Entra-only path:
-
-1. Connect to the database as the configured Microsoft Entra admin.
-2. For Fabric Organization Account authentication, use the same Entra principal in Fabric or create/grant a dedicated Entra principal:
+For the default Entra-only **noninteractive** benchmark-VM path, use ODBC/MSI rather than Linux `sqlcmd -G`:
 
 ```bash
-sqlcmd -C -S "$AZURE_SQL_HOST" -d "$AZURE_SQL_DATABASE" -G \
-  -v FABRIC_ENTRA_PRINCIPAL="$SQL_ENTRA_ADMIN_LOGIN" \
-  -i scripts/provision/setup-azure-sql-entra-mirroring-prereqs.sql
+python3 scripts/provision/run-azure-sql-msi.py \
+  --file scripts/provision/setup-azure-sql-entra-mirroring-prereqs.sql
 ```
 
 If your tenant allows SQL authentication, set `AZURE_SQL_AAD_ONLY_AUTH=false` before deployment. Then create SQL logins in `master`, and users/permissions in the benchmark database:
@@ -78,14 +88,16 @@ sqlcmd -C -S "$AZURE_SQL_HOST" -d "$AZURE_SQL_DATABASE" \
   -i scripts/provision/setup-azure-sql-mirroring-prereqs.sql
 ```
 
-If `CREATE USER ... FROM EXTERNAL PROVIDER` fails because the SQL server identity does not have Directory Readers, create the contained database user by Entra object ID from the benchmark VM managed identity:
+For a Fabric service-principal connection, the Azure SQL server managed identity needs Directory Readers before it can resolve the app while creating its server login. Create the server login in `master` first, then map the database user and grant permissions:
 
 ```bash
-export FABRIC_ENTRA_PRINCIPAL="user-or-group-used-in-fabric"
-export FABRIC_ENTRA_OBJECT_ID="<entra-object-id>"
-export FABRIC_ENTRA_PRINCIPAL_TYPE=E # E=user/app, X=group
+python3 scripts/provision/grant-azure-sql-master-entra-principal-msi.py
 python3 scripts/provision/grant-azure-sql-fabric-entra-principal-msi.py
 ```
+
+The first helper runs `CREATE LOGIN ... FROM EXTERNAL PROVIDER`; the second maps `CREATE USER ... FOR LOGIN` and grants the mirroring permissions. For an Organizational account or group, set `FABRIC_ENTRA_PRINCIPAL`, `FABRIC_ENTRA_OBJECT_ID`, and `FABRIC_ENTRA_PRINCIPAL_TYPE`, then use the same login-to-user flow. Set `FABRIC_REPLACE_CONTAINED_USER=true` only when intentionally replacing a benchmark-owned mapped user.
+
+`AZURE_SQL_SQLCMD_ARGS` is the full source Azure SQL `sqlcmd` argument string; `FABRIC_SQLCMD_ARGS` is the equivalent target SQL analytics endpoint string written by `setup-fabric-items.py`. On Linux, `sqlcmd -G` authenticates an Entra user and does not use the VM managed identity. Use it only interactively. Noninteractive validation uses ODBC/MSI for both paths: the source MSI runner above and the target Fabric ODBC access-token path after assigning the VM identity Fabric Viewer.
 
 ## HammerDB workload
 
@@ -124,9 +136,31 @@ For Entra-only deployments that use VM managed identity, validate readiness with
 After the HammerDB build and before Fabric mirroring, add benchmark-owned columns to `dbo.stock` so they are present in the first replication attempt:
 
 ```bash
-sqlcmd $AZURE_SQL_SQLCMD_ARGS \
-  -i scripts/provision/setup-tprocc-benchmark-columns-azure-sql.sql
+python3 scripts/provision/run-azure-sql-msi.py \
+  --file scripts/provision/setup-tprocc-benchmark-columns-azure-sql.sql
 ```
+
+Create the marker table after the HammerDB build and before mirroring:
+
+```bash
+python3 scripts/provision/setup-azure-sql-cdc-marker-msi.py
+```
+
+`dbo.fabric_cdc_latency_marker` is benchmark-owned. It has `marker_id uniqueidentifier` as its primary key plus `batch_id`, `operation_type`, `source_send_ts`, `source_commit_ts`, and optional `payload`. A controlled source insert is timestamped and then matched by `marker_id` at the SQL analytics endpoint. This is a CDC visibility boundary after mirroring has started; it does not measure initial snapshot loading, schema discovery, or internal replication time.
+
+## Provision Fabric mirroring through the public API
+
+For the public Azure SQL path, do not manually create the mirror in the portal. Run the same post-deployment script after either Deploy-to-Azure or CLI infrastructure provisioning:
+
+```bash
+export SOURCE_TYPE=azure-sql-db
+export FABRIC_CREATE_CONNECTION=true # omit when FABRIC_CONNECTION_ID is already set
+export FABRIC_GRANT_BENCHMARK_VM_WORKSPACE_VIEWER=true
+python3 scripts/provision/setup-fabric-items.py
+source results/fabric-mirror-setup.env
+```
+
+The script creates or reuses the workspace, source connection, mirrored database, and SQL analytics endpoint. `FABRIC_MIRROR_TABLES` selects the default TPROC-C tables plus the marker; leave it empty to mirror all data. The private-network path additionally needs a manually created VNet data gateway before this script runs.
 
 After Fabric mirroring is configured for the `tprocc` database, run:
 
@@ -136,7 +170,7 @@ After Fabric mirroring is configured for the `tprocc` database, run:
 
 ## Measurement scripts
 
-The shared measurement scripts can use Azure SQL as the source without duplicating Fabric polling logic:
+The shared measurement scripts can use Azure SQL as the source without duplicating SQL analytics endpoint polling logic. The first command measures **initial snapshot parity**, not CDC:
 
 ```bash
 python3 scripts/benchmark/measure-initial-sync.py \
@@ -159,11 +193,13 @@ python3 scripts/benchmark/run-stock-bulk-update.py \
   --fabric-stock-table dbo.stock
 ```
 
+CDC begins only after initial snapshot parity succeeds. The marker command measures post-start commits becoming visible at the SQL analytics endpoint.
+
 For post-mirroring schema evolution, add a benchmark column to the smaller `dbo.warehouse` table instead of `dbo.stock`:
 
 ```bash
-sqlcmd $AZURE_SQL_SQLCMD_ARGS \
-  -i scripts/provision/setup-tprocc-schema-evolution-azure-sql.sql
+python3 scripts/provision/run-azure-sql-msi.py \
+  --file scripts/provision/setup-tprocc-schema-evolution-azure-sql.sql
 ```
 
 If the mirrored database item is configured to add new tables automatically, test that path with:
@@ -175,6 +211,14 @@ python3 scripts/benchmark/run-new-table-auto-replication-test.py \
   --fabric-sqlcmd-args "$FABRIC_SQLCMD_ARGS" \
   --rows 1000
 ```
+
+After initial setup or a schema/table-selection change, refresh endpoint metadata before validating the resulting tables or columns:
+
+```bash
+python3 scripts/benchmark/refresh-fabric-sql-endpoint-metadata.py
+```
+
+Store its output with the run. `NotRun` plus a recent `lastSuccess` is not an error; it means no additional table refresh was needed. Never invoke this metadata refresh while marker-latency polling, because it is a result-consistency step rather than a CDC latency operation.
 
 ## Fabric mirroring tutorial
 
@@ -199,10 +243,17 @@ The Sweden Central Azure SQL source uses HammerDB TPROC-C with VM managed identi
 
 `dbo.stock` also includes the pre-mirroring benchmark columns `mirror_benchmark_update_batch`, `mirror_benchmark_update_ts`, and `mirror_benchmark_payload`.
 
-Create the Fabric mirrored Azure SQL Database item in workspace `fsqlmb-benchmark`, connect to `sql-fsqlmb-53vwnrvnudnko.database.windows.net` / `tprocc`, and select the tables above. Use Organization Account, service principal, or workspace identity because SQL Basic authentication is blocked when the Azure SQL server is Entra-only.
+The verified flow creates the Fabric mirrored Azure SQL Database through `setup-fabric-items.py`; it uses an approved Organization Account, service principal, or workspace identity because SQL Basic authentication is blocked when the Azure SQL server is Entra-only.
 
 ## Notes
 
 Fabric mirroring for Azure SQL Database requires a supported database tier. This adapter uses vCore General Purpose rather than low-DTU Basic/S0 tiers.
 
 Fabric setup can use Organization Account, service principal, workspace identity, or Basic authentication when the source allows it. The prepared SQL user receives the minimum Fabric permissions documented by Microsoft: `SELECT`, `ALTER ANY EXTERNAL MIRROR`, `VIEW DATABASE PERFORMANCE STATE`, and `VIEW DATABASE SECURITY STATE`.
+
+## References
+
+- [Microsoft Fabric Mirroring overview and supported operational data sources](https://learn.microsoft.com/fabric/mirroring/overview)
+- [Tutorial: Mirror Azure SQL Database in Microsoft Fabric](https://learn.microsoft.com/fabric/mirroring/azure-sql-database-tutorial)
+- [Fabric Mirroring REST API](https://learn.microsoft.com/fabric/mirroring/mirrored-database-rest-api)
+- [Microsoft Entra service principals with Azure SQL](https://learn.microsoft.com/azure/azure-sql/database/authentication-aad-service-principal-tutorial)

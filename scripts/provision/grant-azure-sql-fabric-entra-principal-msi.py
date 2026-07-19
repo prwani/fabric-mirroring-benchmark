@@ -31,13 +31,22 @@ def principal_type() -> str:
     return value
 
 
+def replace_contained_user() -> bool:
+    value = os.environ.get("FABRIC_REPLACE_CONTAINED_USER", "false").lower()
+    if value in {"true", "1", "yes"}:
+        return True
+    if value in {"false", "0", "no"}:
+        return False
+    raise SystemExit("FABRIC_REPLACE_CONTAINED_USER must be true or false.")
+
+
 def main() -> int:
     server = env("AZURE_SQL_HOST")
     database = os.environ.get("AZURE_SQL_TPROC_C_DATABASE") or env("AZURE_SQL_DATABASE", "tprocc")
     msi_object_id = env("AZURE_SQL_MSI_OBJECT_ID")
     principal_name = env("FABRIC_ENTRA_PRINCIPAL")
-    principal_object_id = env("FABRIC_ENTRA_OBJECT_ID")
-    principal_sql_type = principal_type()
+    env("FABRIC_ENTRA_OBJECT_ID")
+    principal_type()
     driver = os.environ.get("AZURE_SQL_ODBC_DRIVER", "ODBC Driver 18 for SQL Server")
 
     connection = (
@@ -52,29 +61,31 @@ def main() -> int:
 
     principal_literal = principal_name.replace("'", "''")
     quoted_principal = bracket(principal_name)
-    sql = f"""
-    IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'{principal_literal}')
-    BEGIN
-      DECLARE @sid_hex nvarchar(34) =
-        CONVERT(nvarchar(34), CONVERT(varbinary(16), CONVERT(uniqueidentifier, N'{principal_object_id}')), 1);
-      DECLARE @create_sql nvarchar(max) =
-        N'CREATE USER {quoted_principal} WITH SID = ' + @sid_hex + N', TYPE = {principal_sql_type}';
-      EXEC sys.sp_executesql @create_sql;
-    END;
-
-    GRANT SELECT TO {quoted_principal};
-    GRANT ALTER ANY EXTERNAL MIRROR TO {quoted_principal};
-    GRANT VIEW DATABASE PERFORMANCE STATE TO {quoted_principal};
-    GRANT VIEW DATABASE SECURITY STATE TO {quoted_principal};
-
-    SELECT name, type_desc, CONVERT(nvarchar(34), sid, 1)
-    FROM sys.database_principals
-    WHERE name = N'{principal_literal}';
-    """
-
     with pyodbc.connect(connection, autocommit=True, timeout=30) as conn:
         cursor = conn.cursor()
-        cursor.execute(sql)
+        existing = cursor.execute(
+            f"SELECT authentication_type_desc FROM sys.database_principals WHERE name = N'{principal_literal}';"
+        ).fetchone()
+        if existing:
+            if not replace_contained_user():
+                raise SystemExit(
+                    f"Database user {principal_name!r} already exists as {existing[0]}. "
+                    "Set FABRIC_REPLACE_CONTAINED_USER=true only when replacing a benchmark-owned user."
+                )
+            cursor.execute(f"DROP USER {quoted_principal};")
+
+        cursor.execute(
+            f"""
+            CREATE USER {quoted_principal} FOR LOGIN {quoted_principal};
+            GRANT SELECT TO {quoted_principal};
+            GRANT ALTER ANY EXTERNAL MIRROR TO {quoted_principal};
+            GRANT VIEW DATABASE PERFORMANCE STATE TO {quoted_principal};
+            GRANT VIEW DATABASE SECURITY STATE TO {quoted_principal};
+            SELECT name, type_desc, authentication_type_desc
+            FROM sys.database_principals
+            WHERE name = N'{principal_literal}';
+            """
+        )
         while True:
             try:
                 for row in cursor.fetchall():

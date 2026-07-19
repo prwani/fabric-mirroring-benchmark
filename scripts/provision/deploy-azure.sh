@@ -47,48 +47,98 @@ if [[ -z "$SSH_KEY" ]]; then
   SSH_KEY="$(cat "$HOME/.ssh/id_rsa.pub")"
 fi
 
-az deployment group create \
-  --name "$DEPLOYMENT_NAME" \
-  --resource-group "$RESOURCE_GROUP" \
-  --template-file "$ROOT/infra/main.bicep" \
-  --parameters \
-    projectName="${PROJECT_NAME:-fpmb}" \
-    sourceType="$SOURCE_TYPE" \
-    location="$LOCATION" \
-    adminSshPublicKey="$SSH_KEY" \
-    currentClientIpAddress="$CURRENT_CLIENT_IP_ADDRESS" \
-    postgresAdminUser="${POSTGRES_ADMIN_USER:-pgadmin}" \
-    postgresAdminPassword="${POSTGRES_ADMIN_PASSWORD:-}" \
-    postgresDatabaseName="${POSTGRES_DATABASE:-tprocc}" \
-    postgresVersion="${POSTGRES_VERSION:-16}" \
-    postgresSkuName="${POSTGRES_SKU_NAME:-Standard_D2ds_v5}" \
-    postgresSkuTier="${POSTGRES_SKU_TIER:-GeneralPurpose}" \
-    postgresStorageGb="${POSTGRES_STORAGE_GB:-128}" \
-    postgresEnableMicrosoftEntraAuth="${POSTGRES_ENABLE_ENTRA_AUTH:-true}" \
-    postgresEntraAdminName="${POSTGRES_ENTRA_ADMIN_NAME:-}" \
-    postgresEntraAdminObjectId="${POSTGRES_ENTRA_ADMIN_OBJECT_ID:-}" \
-    postgresEntraAdminPrincipalType="${POSTGRES_ENTRA_ADMIN_PRINCIPAL_TYPE:-User}" \
-    mysqlAdminUser="${MYSQL_ADMIN_USER:-mysqladmin}" \
-    mysqlAdminPassword="${MYSQL_ADMIN_PASSWORD:-}" \
-    mysqlDatabaseName="${MYSQL_DATABASE:-tprocc}" \
-    mysqlVersion="${MYSQL_VERSION:-8.0.21}" \
-    mysqlSkuName="${MYSQL_SKU_NAME:-Standard_D2ds_v4}" \
-    mysqlStorageGb="${MYSQL_STORAGE_GB:-128}" \
-    sqlEntraAdminLogin="${SQL_ENTRA_ADMIN_LOGIN:-}" \
-    sqlEntraAdminObjectId="${SQL_ENTRA_ADMIN_OBJECT_ID:-}" \
-    azureSqlDatabaseName="${AZURE_SQL_DATABASE:-tprocc}" \
-    azureSqlAdminUser="${AZURE_SQL_ADMIN_USER:-sqladmin}" \
-    azureSqlAdminPassword="${AZURE_SQL_ADMIN_PASSWORD:-}" \
-    azureSqlAzureAdOnlyAuthentication="${AZURE_SQL_AAD_ONLY_AUTH:-true}" \
-    azureSqlSkuName="${AZURE_SQL_SKU_NAME:-GP_Gen5_4}" \
-    azureSqlSkuTier="${AZURE_SQL_SKU_TIER:-GeneralPurpose}" \
-    azureSqlSkuFamily="${AZURE_SQL_SKU_FAMILY:-Gen5}" \
-    azureSqlSkuCapacity="${AZURE_SQL_SKU_CAPACITY:-4}" \
-    azureSqlMaxSizeBytes="${AZURE_SQL_MAX_SIZE_BYTES:-34359738368}" \
-    sqlServerVmAdminUsername="${SQL_SERVER_VM_ADMIN_USERNAME:-azureuser}" \
-    sqlServerVmAdminPassword="${SQL_SERVER_VM_ADMIN_PASSWORD:-}" \
-    fabricCapacitySku="${FABRIC_CAPACITY_SKU:-F8}" \
-    fabricAdminUpn="$ADMIN_UPN" \
-  --only-show-errors
+CUSTOM_TAGS_VALUE="${CUSTOM_TAGS:-}"
+if [[ -z "$CUSTOM_TAGS_VALUE" ]]; then
+  CUSTOM_TAGS_VALUE='{}'
+fi
+
+if [[ "$SOURCE_TYPE" == "azure-sql-db" ]]; then
+  # The source-specific public template exposes custom tag targets and avoids irrelevant parameters.
+  az deployment group create \
+    --name "$DEPLOYMENT_NAME" \
+    --resource-group "$RESOURCE_GROUP" \
+    --template-file "$ROOT/infra/azure-sql-db.bicep" \
+    --parameters \
+      projectName="${PROJECT_NAME:-fsqlmb}" \
+      location="$LOCATION" \
+      adminUsername="${ADMIN_USERNAME:-azureuser}" \
+      adminSshPublicKey="$SSH_KEY" \
+      currentClientIpAddress="$CURRENT_CLIENT_IP_ADDRESS" \
+      customTags="$CUSTOM_TAGS_VALUE" \
+      applyCustomTagsToAzureSql="${APPLY_CUSTOM_TAGS_TO_AZURE_SQL:-true}" \
+      applyCustomTagsToBenchmarkVm="${APPLY_CUSTOM_TAGS_TO_BENCHMARK_VM:-true}" \
+      applyCustomTagsToFabricCapacity="${APPLY_CUSTOM_TAGS_TO_FABRIC_CAPACITY:-true}" \
+      applyCustomTagsToNetworking="${APPLY_CUSTOM_TAGS_TO_NETWORKING:-true}" \
+      applyCustomTagsToMonitoring="${APPLY_CUSTOM_TAGS_TO_MONITORING:-true}" \
+      sqlEntraAdminLogin="$SQL_ENTRA_ADMIN_LOGIN" \
+      sqlEntraAdminObjectId="$SQL_ENTRA_ADMIN_OBJECT_ID" \
+      azureSqlDatabaseName="${AZURE_SQL_DATABASE:-tprocc}" \
+      azureSqlAdminUser="${AZURE_SQL_ADMIN_USER:-sqladmin}" \
+      azureSqlAdminPassword="${AZURE_SQL_ADMIN_PASSWORD:-}" \
+      azureSqlAzureAdOnlyAuthentication="${AZURE_SQL_AAD_ONLY_AUTH:-true}" \
+      azureSqlSkuName="${AZURE_SQL_SKU_NAME:-GP_Gen5_4}" \
+      azureSqlSkuTier="${AZURE_SQL_SKU_TIER:-GeneralPurpose}" \
+      azureSqlSkuFamily="${AZURE_SQL_SKU_FAMILY:-Gen5}" \
+      azureSqlSkuCapacity="${AZURE_SQL_SKU_CAPACITY:-4}" \
+      azureSqlMaxSizeBytes="${AZURE_SQL_MAX_SIZE_BYTES:-34359738368}" \
+      fabricCapacitySku="${FABRIC_CAPACITY_SKU:-F8}" \
+      fabricAdminUpn="$ADMIN_UPN" \
+    --only-show-errors
+else
+  az deployment group create \
+    --name "$DEPLOYMENT_NAME" \
+    --resource-group "$RESOURCE_GROUP" \
+    --template-file "$ROOT/infra/main.bicep" \
+    --parameters \
+      projectName="${PROJECT_NAME:-fpmb}" \
+      sourceType="$SOURCE_TYPE" \
+      location="$LOCATION" \
+      adminSshPublicKey="$SSH_KEY" \
+      currentClientIpAddress="$CURRENT_CLIENT_IP_ADDRESS" \
+      postgresAdminUser="${POSTGRES_ADMIN_USER:-pgadmin}" \
+      postgresAdminPassword="${POSTGRES_ADMIN_PASSWORD:-}" \
+      postgresDatabaseName="${POSTGRES_DATABASE:-tprocc}" \
+      postgresVersion="${POSTGRES_VERSION:-16}" \
+      postgresSkuName="${POSTGRES_SKU_NAME:-Standard_D2ds_v5}" \
+      postgresSkuTier="${POSTGRES_SKU_TIER:-GeneralPurpose}" \
+      postgresStorageGb="${POSTGRES_STORAGE_GB:-128}" \
+      postgresEnableMicrosoftEntraAuth="${POSTGRES_ENABLE_ENTRA_AUTH:-true}" \
+      postgresEntraAdminName="${POSTGRES_ENTRA_ADMIN_NAME:-}" \
+      postgresEntraAdminObjectId="${POSTGRES_ENTRA_ADMIN_OBJECT_ID:-}" \
+      postgresEntraAdminPrincipalType="${POSTGRES_ENTRA_ADMIN_PRINCIPAL_TYPE:-User}" \
+      mysqlAdminUser="${MYSQL_ADMIN_USER:-mysqladmin}" \
+      mysqlAdminPassword="${MYSQL_ADMIN_PASSWORD:-}" \
+      mysqlDatabaseName="${MYSQL_DATABASE:-tprocc}" \
+      mysqlVersion="${MYSQL_VERSION:-8.0.21}" \
+      mysqlSkuName="${MYSQL_SKU_NAME:-Standard_D2ds_v4}" \
+      mysqlStorageGb="${MYSQL_STORAGE_GB:-128}" \
+      sqlEntraAdminLogin="${SQL_ENTRA_ADMIN_LOGIN:-}" \
+      sqlEntraAdminObjectId="${SQL_ENTRA_ADMIN_OBJECT_ID:-}" \
+      azureSqlDatabaseName="${AZURE_SQL_DATABASE:-tprocc}" \
+      azureSqlAdminUser="${AZURE_SQL_ADMIN_USER:-sqladmin}" \
+      azureSqlAdminPassword="${AZURE_SQL_ADMIN_PASSWORD:-}" \
+      azureSqlAzureAdOnlyAuthentication="${AZURE_SQL_AAD_ONLY_AUTH:-true}" \
+      azureSqlSkuName="${AZURE_SQL_SKU_NAME:-GP_Gen5_4}" \
+      azureSqlSkuTier="${AZURE_SQL_SKU_TIER:-GeneralPurpose}" \
+      azureSqlSkuFamily="${AZURE_SQL_SKU_FAMILY:-Gen5}" \
+      azureSqlSkuCapacity="${AZURE_SQL_SKU_CAPACITY:-4}" \
+      azureSqlMaxSizeBytes="${AZURE_SQL_MAX_SIZE_BYTES:-34359738368}" \
+      sqlServerVmAdminUsername="${SQL_SERVER_VM_ADMIN_USERNAME:-azureuser}" \
+      sqlServerVmAdminPassword="${SQL_SERVER_VM_ADMIN_PASSWORD:-}" \
+      fabricCapacitySku="${FABRIC_CAPACITY_SKU:-F8}" \
+      fabricAdminUpn="$ADMIN_UPN" \
+    --only-show-errors
+fi
 
 echo "Deployment completed at $(timestamp_utc)."
+
+if [[ "${ASSIGN_AZURE_SQL_SERVER_DIRECTORY_READERS:-false}" == "true" ]]; then
+  AZURE_SQL_SERVER_NAME="${AZURE_SQL_SERVER_NAME:-$(az sql server list --resource-group "$RESOURCE_GROUP" --query '[0].name' -o tsv)}" \
+    AZURE_RESOURCE_GROUP="$RESOURCE_GROUP" \
+    AZURE_SUBSCRIPTION_ID="$AZURE_SUBSCRIPTION_ID" \
+    bash "$SCRIPT_DIR/assign-azure-sql-server-directory-readers.sh"
+fi
+
+if [[ "${PROVISION_FABRIC_SOURCE_APP:-false}" == "true" ]]; then
+  bash "$SCRIPT_DIR/create-fabric-source-app.sh"
+fi
